@@ -536,7 +536,7 @@ ${formatInstruction}
           { role: 'system', content: systemMessage },
           { role: 'user', content: userContent as unknown as string }
         ],
-        temperature: selectedModel === 'kimi-k2.5' ? 1 : (enableEvidenceSupport ? 0.4 : 0.7),
+        temperature: selectedModel === 'kimi-k2.5' || selectedModel === 'kimi-k2.6' ? 1 : (enableEvidenceSupport ? 0.4 : 0.7),
         stream: true,
       },
       {
