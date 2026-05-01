@@ -16,6 +16,8 @@ const nextConfig: NextConfig = {
     ];
   },
   
+  devIndicators: false,
+  
   // 允许开发模式下的跨域请求
   allowedDevOrigins: [
     'word.qiyuan.icu',

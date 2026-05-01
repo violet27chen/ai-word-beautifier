@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { Activity, KeyRound, RefreshCw, ShieldCheck, TriangleAlert } from 'lucide-react';
+import Link from 'next/link';
 
 type EnvStatus = {
   zhipu: boolean;
@@ -94,7 +95,10 @@ export default function AdminPage() {
   useEffect(() => {
     const cached = window.sessionStorage.getItem(STORAGE_KEY) || '';
     if (cached) {
-      fetchOverview(cached);
+      const timer = window.setTimeout(() => {
+        fetchOverview(cached);
+      }, 0);
+      return () => window.clearTimeout(timer);
     }
   }, []);
 
@@ -126,9 +130,9 @@ export default function AdminPage() {
             <h1 className="text-2xl font-bold text-gray-900">管理后台</h1>
             <p className="mt-1 text-sm text-gray-500">用于查看运行状态、接口可用性与最近请求记录</p>
           </div>
-          <a href="/" className="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-100">
+          <Link href="/" className="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-100">
             返回首页
-          </a>
+          </Link>
         </div>
 
         {!authorized ? (

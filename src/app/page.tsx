@@ -369,7 +369,7 @@ export default function Home() {
     if (selectedModelOption?.supportsImage) return;
     const firstImageModel = MODELS.find(m => m.supportsImage);
     if (firstImageModel) {
-      setModel(firstImageModel.value);
+      Promise.resolve().then(() => setModel(firstImageModel.value));
     }
   }, [hasImages, selectedModelOption]);
 
