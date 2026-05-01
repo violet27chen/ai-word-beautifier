@@ -46,10 +46,13 @@
 
 - **默认模型**：若配置了 `DEEPSEEK_API_KEY`，默认使用 `deepseek-v4-flash`；否则默认使用 `glm-4.7`。
 - **图片输入**：当请求包含图片且目标模型不支持多模态时，会回退到可用的多模态模型（通常为 `glm-5v-turbo` 或 Kimi 多模态模型）。
-- **MiMo 模型**：当 `model` 以 `mimo-` 开头时，优先使用小米 MiMo 的兼容接口；若未配置 `MIMO_API_KEY`，则回退到智谱可用模型。当前默认仅 `mimo-v2.5` 会在包含图片时继续走 MiMo，其余 `mimo-*` 在包含图片时回退到智谱多模态模型。
+- **MiMo 模型**：当 `model` 以 `mimo-` 开头时，优先使用小米 MiMo 的兼容接口；若未配置 `MIMO_API_KEY`，则回退到智谱可用模型。当前默认 `mimo-v2.5` 与 `mimo-v2-omni` 在包含图片时继续走 MiMo，其余 `mimo-*` 在包含图片时回退到智谱多模态模型。
 - **Moonshot/Kimi 模型**：当 `model` 以 `moonshot-v1-` 或 `kimi-` 开头时使用 Moonshot/Kimi；当包含图片但选择了纯文本 Moonshot 模型时，会自动切换到对应的 `-vision-preview` 或默认多模态模型。
 - **豆包模型**：支持 `doubao-seed-1-6-flash-250828`，以及以 `ep-` 开头的 Volcengine Endpoint ID。
 - **DashScope（百炼）**：当前内置 `qwen3.5-flash`（通过兼容接口接入）；当包含图片时回退到智谱多模态模型。
+
+补充说明：
+- `mimo-v2-omni` 为全模态模型，理论上可支持文本、图像、视频、语音等输入形态，以及文本/语音输出；本项目当前仅在生成接口中使用文本与图片输入，并将输出作为 Markdown 文本流返回。
 
 ## API 说明
 

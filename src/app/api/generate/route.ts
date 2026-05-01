@@ -343,7 +343,7 @@ export async function POST(req: Request) {
     const hasMimoKey = Boolean(process.env.MIMO_API_KEY?.trim());
     const defaultTextModel = hasDeepseekKey ? 'deepseek-v4-flash' : 'glm-4.7';
     const effectiveModel = requestedModel || defaultTextModel;
-    const mimoSupportsVision = effectiveModel === 'mimo-v2.5';
+    const mimoSupportsVision = effectiveModel === 'mimo-v2.5' || effectiveModel === 'mimo-v2-omni';
     let client = hasDeepseekKey ? deepseekOpenai : zhipuOpenai;
     let selectedModel = effectiveModel;
 
