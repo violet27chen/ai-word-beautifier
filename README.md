@@ -36,7 +36,7 @@
    - 字数要求、文笔风格、受众/教育水平、写作水平设定
    - 错别字与“人类痕迹”模拟开关（用于生成更贴近人工写作的文本特征）
    - 资料检索增强、图示模式（思维导图/流程图）
-   - 署名与日期落款（用于下载时生成右对齐签名区块）
+   - 署名与日期落款（默认关闭，用于下载时生成右对齐签名区块）
 5. 点击生成后，结果以流式方式输出为 Markdown，可直接预览。
 6. 点击下载，将当前 Markdown（并将图示转换为图片）导出为 `.docx`。
 
@@ -67,7 +67,7 @@
 - `addTypos` / `humanTrace`：布尔值，可选，用于模拟更接近人工写作的特征
 - `enableEvidenceSupport`：布尔值，可选，是否启用资料检索增强
 - `diagramMode`：字符串，可选，支持 `none` / `mindmap` / `flowchart`
-- `enableSignatureDate`：布尔值，可选，是否启用落款
+- `enableSignatureDate`：布尔值，可选，是否启用落款（默认 false）
 - `authorName` / `documentDate`：字符串，可选，落款作者与日期
 
 响应：

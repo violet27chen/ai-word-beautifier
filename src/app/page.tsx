@@ -216,7 +216,7 @@ export default function Home() {
   const [addTypos, setAddTypos] = useState(false);
   const [humanTrace, setHumanTrace] = useState(false);
   const [enableEvidenceSupport, setEnableEvidenceSupport] = useState(false);
-  const [enableSignatureDate, setEnableSignatureDate] = useState(true);
+  const [enableSignatureDate, setEnableSignatureDate] = useState(false);
   const [authorName, setAuthorName] = useState('');
   const [documentDate, setDocumentDate] = useState('');
   const [refinePrompt, setRefinePrompt] = useState('');
