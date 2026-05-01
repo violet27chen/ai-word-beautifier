@@ -320,12 +320,20 @@ export async function POST(req: Request) {
     let client = hasDeepseekKey ? deepseekOpenai : zhipuOpenai;
     let selectedModel = effectiveModel;
 
-    if (effectiveModel === 'moonshot-v1-128k' || effectiveModel === 'kimi-k2-turbo-preview' || effectiveModel === 'kimi-k2.5') {
+    if (effectiveModel.startsWith('moonshot-v1-') || effectiveModel.startsWith('kimi-')) {
       client = moonshotOpenai;
-      if (hasImages) {
-        selectedModel = 'kimi-k2.5'; // Moonshot multi-modal model
-      } else {
+      if (!hasImages) {
         selectedModel = effectiveModel;
+      } else if (
+        effectiveModel === 'kimi-k2.6' ||
+        effectiveModel === 'kimi-k2.5' ||
+        effectiveModel.endsWith('-vision-preview')
+      ) {
+        selectedModel = effectiveModel;
+      } else if (effectiveModel === 'moonshot-v1-8k' || effectiveModel === 'moonshot-v1-32k' || effectiveModel === 'moonshot-v1-128k') {
+        selectedModel = effectiveModel.replace(/^moonshot-v1-(8k|32k|128k)$/i, 'moonshot-v1-$1-vision-preview');
+      } else {
+        selectedModel = 'kimi-k2.6';
       }
     } else if (
       effectiveModel === 'deepseek-v4-flash' ||
