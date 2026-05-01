@@ -20,15 +20,21 @@ type ModelOption = {
 type NavView = 'beautify' | 'welfare';
 
 const MODELS: ModelOption[] = [
-  { value: 'glm-4.7', label: 'GLM-4.7 高智能模型 (推荐)', supportsImage: false },
+  { value: 'deepseek-v4-flash', label: 'DeepSeek-V4-Flash (默认)', supportsImage: false },
+  { value: 'deepseek-v4-pro', label: 'DeepSeek-V4-Pro', supportsImage: false },
+  { value: 'kimi-k2.6', label: 'Kimi-K2.6 (多模态)', supportsImage: true },
+  { value: 'kimi-k2.5', label: 'Kimi-K2.5 (多模态)', supportsImage: true },
+  { value: 'moonshot-v1-8k', label: 'Moonshot-v1-8k', supportsImage: false },
+  { value: 'moonshot-v1-32k', label: 'Moonshot-v1-32k', supportsImage: false },
+  { value: 'moonshot-v1-128k', label: 'Moonshot-v1-128k', supportsImage: false },
+  { value: 'moonshot-v1-8k-vision-preview', label: 'Moonshot-v1-8k-vision-preview (视觉)', supportsImage: true },
+  { value: 'moonshot-v1-32k-vision-preview', label: 'Moonshot-v1-32k-vision-preview (视觉)', supportsImage: true },
+  { value: 'moonshot-v1-128k-vision-preview', label: 'Moonshot-v1-128k-vision-preview (视觉)', supportsImage: true },
+  { value: 'glm-4.7', label: 'GLM-4.7 高智能模型', supportsImage: false },
   { value: 'glm-5.1', label: 'GLM-5.1 最新旗舰', supportsImage: false },
   { value: 'glm-5v-turbo', label: 'GLM-5V-Turbo (多模态)', supportsImage: true },
-  { value: 'kimi-k2.5', label: 'Kimi-K2.5 (多模态)', supportsImage: true },
   { value: 'qwen3.5-flash', label: 'Qwen3.5-Flash (阿里云百炼)', supportsImage: false },
-  { value: 'deepseek-chat', label: 'DeepSeek-V3 (深度求索)', supportsImage: false },
   { value: 'doubao-seed-1-6-flash-250828', label: 'Doubao-Seed-1.6-Flash (豆包多模态)', supportsImage: true },
-  { value: 'moonshot-v1-128k', label: 'Moonshot-v1-128k (Kimi)', supportsImage: false },
-  { value: 'kimi-k2-turbo-preview', label: 'Kimi-K2-Turbo-Preview', supportsImage: false }
 ];
 
 const WRITING_STYLES = [
@@ -155,7 +161,10 @@ export default function Home() {
   const [activeNav, setActiveNav] = useState<NavView>('beautify');
   const [prompt, setPrompt] = useState('');
   const [content, setContent] = useState('');
-  const [model, setModel] = useState(MODELS[0].value);
+  const [model, setModel] = useState(() => {
+    const preferred = 'deepseek-v4-flash';
+    return MODELS.some((item) => item.value === preferred) ? preferred : MODELS[0].value;
+  });
   const [isFetching, setIsFetching] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
   const isTypingRef = useRef(false);
@@ -365,7 +374,7 @@ export default function Home() {
     if (selectedModelOption?.supportsImage) return;
     const firstImageModel = MODELS.find(m => m.supportsImage);
     if (firstImageModel) {
-      setModel(firstImageModel.value);
+      Promise.resolve().then(() => setModel(firstImageModel.value));
     }
   }, [hasImages, selectedModelOption]);
 
