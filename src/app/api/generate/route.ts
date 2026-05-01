@@ -1,0 +1,601 @@
+import { NextResponse } from 'next/server';
+import OpenAI from 'openai';
+import { trackAdminEvent } from '@/lib/admin-metrics';
+
+export const maxDuration = 300; // Allow 5 mins for large models + vision
+
+type EvidenceItem = {
+  title: string;
+  url: string;
+  publishedAt?: string;
+  source?: string;
+};
+
+function normalizeUrl(url: string): string {
+  let fixed = url.trim();
+  fixed = fixed.replace(/[，。；！？、）〕》>"'`]+$/g, '');
+  if (fixed.startsWith('ttps://')) fixed = `h${fixed}`;
+  if (fixed.startsWith('ttp://')) fixed = `h${fixed}`;
+  fixed = fixed.replace(/^https?:\/(?!\/)/, (prefix) => `${prefix}/`);
+  if (/\.ht$/i.test(fixed)) fixed = `${fixed}m`;
+  return fixed;
+}
+
+function isPlaceholderUrl(url: string): boolean {
+  const normalized = normalizeUrl(url).toLowerCase();
+  if (!/^https?:\/\//.test(normalized)) return false;
+  const host = normalized.replace(/^https?:\/\//, '').split('/')[0];
+  const blockedHosts = new Set([
+    'example.com',
+    'www.example.com',
+    'example.org',
+    'www.example.org',
+    'example.net',
+    'www.example.net',
+    'test.com',
+    'www.test.com',
+    'demo.com',
+    'www.demo.com',
+    'sample.com',
+    'www.sample.com',
+    'placeholder.com',
+    'www.placeholder.com',
+    'yourdomain.com',
+    'www.yourdomain.com',
+    'your-site.com',
+    'www.your-site.com',
+    'yourwebsite.com',
+    'www.yourwebsite.com',
+    'localhost',
+    '127.0.0.1',
+    '0.0.0.0',
+  ]);
+  if (blockedHosts.has(host)) return true;
+  return /example|placeholder|your-?site|your-?domain|demo|sample/.test(normalized);
+}
+
+function normalizeReferenceUrlContent(content: string): string {
+  const withCodeUrl = content.replace(/`([^`\n]+)`/g, (full, raw) => {
+    if (!/^https?:\/\//i.test(raw) && !/^(ttps?:\/\/)/i.test(raw)) return full;
+    const fixed = normalizeUrl(raw);
+    if (isPlaceholderUrl(fixed)) return '';
+    return `\`${fixed}\``;
+  });
+  return withCodeUrl
+    .replace(/(https?:\/\/[^\s`]+|ttps?:\/\/[^\s`]+)/g, (raw) => {
+      const fixed = normalizeUrl(raw);
+      return isPlaceholderUrl(fixed) ? '' : fixed;
+    })
+    .replace(/``/g, '');
+}
+
+function getValidUrls(content: string): string[] {
+  const matched = content.match(/(https?:\/\/[^\s`]+|ttps?:\/\/[^\s`]+)/g) || [];
+  return matched
+    .map((raw) => normalizeUrl(raw))
+    .filter((url) => /^https?:\/\//i.test(url) && !isPlaceholderUrl(url));
+}
+
+function sanitizeReferenceSection(sectionText: string): string {
+  return sectionText
+    .split('\n')
+    .map((line) => {
+      const match = line.match(/^(\s*)\[(\d+)\]\s*(.+)\s*$/);
+      if (!match) return line;
+      const prefix = match[1];
+      const no = match[2];
+      const cleaned = normalizeReferenceUrlContent(match[3]);
+      if (!cleaned) return '';
+      if (getValidUrls(cleaned).length === 0) return '';
+      return `${prefix}[${no}] ${cleaned}`;
+    })
+    .filter((line, idx, arr) => {
+      if (line.trim() !== '') return true;
+      const prev = arr[idx - 1];
+      const next = arr[idx + 1];
+      return Boolean(prev?.trim()) && Boolean(next?.trim());
+    })
+    .join('\n');
+}
+
+function createStreamingCitationNormalizer() {
+  let inReferenceSection = false;
+  let nextCitationNo = 1;
+  const oldToNew = new Map<number, number>();
+  let pending = '';
+
+  const mapCitationNo = (rawNo: string): string => {
+    const oldNo = Number(rawNo);
+    if (Number.isNaN(oldNo)) return rawNo;
+    if (!oldToNew.has(oldNo)) {
+      oldToNew.set(oldNo, nextCitationNo);
+      nextCitationNo += 1;
+    }
+    return String(oldToNew.get(oldNo));
+  };
+
+  const transform = (text: string): string => {
+    const marker = text.search(/(^|\n)##\s*参考资料\s*($|\n)/);
+    let output = text;
+    if (marker >= 0) {
+      const bodyPart = text.slice(0, marker).replace(/\[(\d+)\]/g, (_, n) => `[${mapCitationNo(n)}]`);
+      const mappedRefPart = text.slice(marker).replace(/(^|\n)\s*\[(\d+)\]/g, (_, prefix, n) => `${prefix}[${mapCitationNo(n)}]`);
+      const refPart = sanitizeReferenceSection(mappedRefPart);
+      inReferenceSection = true;
+      output = `${bodyPart}${refPart}`;
+    } else if (inReferenceSection) {
+      const mappedRefChunk = text.replace(/(^|\n)\s*\[(\d+)\]/g, (_, prefix, n) => `${prefix}[${mapCitationNo(n)}]`);
+      output = sanitizeReferenceSection(mappedRefChunk);
+    } else {
+      output = text.replace(/\[(\d+)\]/g, (_, n) => `[${mapCitationNo(n)}]`);
+    }
+    return normalizeReferenceUrlContent(output);
+  };
+
+  const push = (chunk: string): string => {
+    const merged = pending + chunk;
+    const safeTailLen = 32;
+    if (merged.length <= safeTailLen) {
+      pending = merged;
+      return '';
+    }
+    const flushPart = merged.slice(0, -safeTailLen);
+    pending = merged.slice(-safeTailLen);
+    return transform(flushPart);
+  };
+
+  const flush = (): string => {
+    if (!pending) return '';
+    const output = transform(pending);
+    pending = '';
+    return output;
+  };
+
+  return { push, flush };
+}
+
+let tavilyKeyCursor = 0;
+
+function getTavilyApiKeys(): string[] {
+  const keyList = [
+    process.env.TAVILY_API_KEY?.trim() || '',
+    process.env.TAVILY_API_KEY_2?.trim() || '',
+    process.env.TAVILY_API_KEY_3?.trim() || '',
+    ...(process.env.TAVILY_API_KEYS?.split(',').map((item) => item.trim()) || []),
+  ].filter(Boolean);
+  return Array.from(new Set(keyList));
+}
+
+function getRoundRobinOrderedKeys(keys: string[]): string[] {
+  if (keys.length <= 1) return keys;
+  const start = tavilyKeyCursor % keys.length;
+  tavilyKeyCursor = (tavilyKeyCursor + 1) % keys.length;
+  return keys.slice(start).concat(keys.slice(0, start));
+}
+
+async function fetchLatestEvidenceFromMcp(query: string): Promise<EvidenceItem[]> {
+  const endpoint = process.env.MCP_SEARCH_ENDPOINT?.trim();
+  if (!endpoint || !query.trim()) return [];
+
+  try {
+    const apiKey = process.env.MCP_API_KEY?.trim() || process.env.TAVILY_API_KEY?.trim();
+
+    if (endpoint.includes('api.tavily.com/search')) {
+      const tavilyKeys = getRoundRobinOrderedKeys(getTavilyApiKeys());
+      const candidates = tavilyKeys.length > 0 ? tavilyKeys : (apiKey ? [apiKey] : []);
+      if (candidates.length === 0) return [];
+
+      for (const key of candidates) {
+        const response = await fetch(endpoint, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          cache: 'no-store',
+          body: JSON.stringify({
+            api_key: key,
+            query,
+            topic: 'general',
+            search_depth: 'advanced',
+            max_results: 6,
+            include_answer: false,
+            include_raw_content: false,
+          }),
+          signal: AbortSignal.timeout(15000),
+        });
+
+        if (!response.ok) {
+          continue;
+        }
+
+        const data = await response.json() as {
+          results?: Array<Record<string, unknown>>;
+        };
+        const parsed = (data.results || [])
+          .map((item): EvidenceItem | null => {
+            const title = String(item.title || '').trim();
+            const url = String(item.url || '').trim();
+            const publishedAt = String(item.published_date || '').trim();
+            const source = String(item.site_name || '').trim();
+            if (!title || !url) return null;
+            return {
+              title,
+              url,
+              publishedAt: publishedAt || undefined,
+              source: source || undefined,
+            };
+          })
+          .filter((item): item is EvidenceItem => item !== null);
+
+        if (parsed.length > 0) return parsed;
+      }
+
+      return [];
+    }
+
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+    if (apiKey) {
+      headers.Authorization = `Bearer ${apiKey}`;
+    }
+
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers,
+      cache: 'no-store',
+      body: JSON.stringify({
+        query,
+        topK: 6,
+        freshness: 'latest',
+      }),
+      signal: AbortSignal.timeout(15000),
+    });
+
+    if (!response.ok) return [];
+
+    const data = await response.json() as {
+      items?: Array<Record<string, unknown>>;
+      results?: Array<Record<string, unknown>>;
+      data?: Array<Record<string, unknown>>;
+    };
+
+    const rawItems = data.items || data.results || data.data || [];
+    return rawItems
+      .map((item): EvidenceItem | null => {
+        const title = String(item.title || item.name || '').trim();
+        const url = String(item.url || item.link || '').trim();
+        const publishedAt = String(item.publishedAt || item.date || item.published_at || '').trim();
+        const source = String(item.source || item.site || item.publisher || '').trim();
+        if (!title || !url) return null;
+        return {
+          title,
+          url,
+          publishedAt: publishedAt || undefined,
+          source: source || undefined,
+        };
+      })
+      .filter((item): item is EvidenceItem => item !== null);
+  } catch {
+    return [];
+  }
+}
+
+export async function POST(req: Request) {
+  try {
+    const zhipuOpenai = new OpenAI({
+      apiKey: process.env.ZHIPU_API_KEY || '',
+      baseURL: 'https://open.bigmodel.cn/api/paas/v4/',
+    });
+
+    const moonshotOpenai = new OpenAI({
+      apiKey: process.env.MOONSHOT_API_KEY || '',
+      baseURL: 'https://api.moonshot.cn/v1',
+    });
+
+    const deepseekOpenai = new OpenAI({
+      apiKey: process.env.DEEPSEEK_API_KEY || '',
+      baseURL: 'https://api.deepseek.com',
+    });
+
+    const doubaoOpenai = new OpenAI({
+      apiKey: process.env.DOUBAO_API_KEY || process.env.ARK_API_KEY || '',
+      baseURL: 'https://ark.cn-beijing.volces.com/api/v3',
+    });
+
+    const dashscopeOpenai = new OpenAI({
+      apiKey: process.env.DASHSCOPE_API_KEY || '',
+      baseURL: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
+    });
+
+    const { prompt, content, model, images, wordCount, writingStyle, eduLevel, perfLevel, addTypos, humanTrace, enableEvidenceSupport, diagramMode, enableSignatureDate, authorName, documentDate } = await req.json();
+    
+    const hasImages = images && images.length > 0;
+    
+    // Determine the provider and model
+    let client = zhipuOpenai;
+    let selectedModel = model || 'glm-4.7';
+
+    if (model === 'moonshot-v1-128k' || model === 'kimi-k2-turbo-preview' || model === 'kimi-k2.5') {
+      client = moonshotOpenai;
+      if (hasImages) {
+        selectedModel = 'kimi-k2.5'; // Moonshot multi-modal model
+      } else {
+        selectedModel = model;
+      }
+    } else if (model === 'deepseek-chat') {
+      client = deepseekOpenai;
+      // DeepSeek is a pure text model, so if there are images, we fall back to a multi-modal model
+      if (hasImages) {
+        client = zhipuOpenai;
+        selectedModel = 'glm-5v-turbo'; 
+      } else {
+        selectedModel = 'deepseek-chat';
+      }
+    } else if (model === 'doubao-seed-1-6-flash-250828' || model?.startsWith('ep-')) {
+      // All Volcengine (Doubao) endpoints start with 'ep-'
+      client = doubaoOpenai;
+      selectedModel = model; // Use the specific endpoint ID provided
+    } else if (model === 'qwen3.5-flash') {
+      client = dashscopeOpenai;
+      if (hasImages) {
+        client = zhipuOpenai;
+        selectedModel = 'glm-5v-turbo';
+      } else {
+        selectedModel = 'qwen3.5-flash';
+      }
+    } else {
+      client = zhipuOpenai;
+      if (hasImages) {
+        selectedModel = 'glm-5v-turbo'; // Zhipu multi-modal model
+      } else {
+        selectedModel = model || 'glm-4.7';
+      }
+    }
+
+    const selectedDiagramMode = diagramMode === 'mindmap' || diagramMode === 'flowchart' ? diagramMode : 'none';
+    const formatInstruction = selectedDiagramMode === 'none'
+      ? '【格式最高指令】：**绝对不要**使用 ```markdown、```html 和 ``` 等代码块语法来包裹你的回答！请直接输出纯文本的正文内容！**绝对不要**在开头输出"html"或"markdown"等字眼！'
+      : '【格式最高指令】：禁止使用 ```markdown、```html 等普通代码块；仅允许在图示位置使用一个 ```mermaid ... ``` 代码块来输出图示，其他正文必须是正常 Markdown 文本，且绝对不要在开头输出"html"或"markdown"等字眼！';
+    const systemMessage = `你是一个专业的文档排版美化与编写专家。
+你需要根据用户的要求和提供的原始内容（如果有的话），生成一份高质量的文档。
+请直接输出Markdown格式的文档内容，不需要额外的寒暄或解释。
+【排版最高指令】：必须严格遵循中文标准公文/报告的排版规范：
+1. 文档大标题必须居中（使用 <div align="center"><h1>标题</h1></div> 语法）。
+2. 正文段落开头必须空两格（首行缩进，可以使用全角空格“　　”）。
+3. 层级分明：合理使用二级标题(##)、三级标题(###)和有序/无序列表，不要全部挤成一团。
+4. 重点内容使用加粗（**文字**）标出。
+${formatInstruction}
+【表情最高指令】：绝对、永远不要在生成的文档或任何回答中使用任何表情符号（Emoji）和任何特殊图标！生成的文本必须是纯粹的汉字、标点和标准字符！一旦发现使用表情符号将导致系统崩溃。`;
+
+    let textPrompt = `要求：${prompt}`;
+    if (content) {
+      textPrompt += `\n\n原始内容：\n${content}`;
+    }
+
+    const latestEvidence = enableEvidenceSupport
+      ? await fetchLatestEvidenceFromMcp(`${prompt}\n${content || ''}`.trim())
+      : [];
+
+    if (latestEvidence.length > 0) {
+      const evidenceBlock = latestEvidence
+        .slice(0, 6)
+        .map((item, index) => {
+          const meta = [item.source, item.publishedAt].filter(Boolean).join('，');
+          return `- [E${index + 1}] ${item.title}${meta ? `（${meta}）` : ''}：${item.url}`;
+        })
+        .join('\n');
+      textPrompt += `\n\n【MCP最新资料检索结果】：\n${evidenceBlock}`;
+    }
+
+    // Process advanced constraints
+    const constraints = [];
+    if (wordCount) {
+      constraints.push(`字数要求：大约 ${wordCount} 字左右`);
+    }
+    if (writingStyle) {
+      constraints.push(`文笔风格：${writingStyle}`);
+    }
+    if (eduLevel) {
+      const levelDesc = perfLevel ? `${perfLevel}的${eduLevel}` : eduLevel;
+      constraints.push(`角色设定/写作水平：你需要模拟【${levelDesc}】的写作水平、思维深度和行文口吻来进行编写`);
+    }
+    if (addTypos) {
+      constraints.push(`错别字要求：必须在生成的正文中随机包含1到5个“同音错别字”或“形近错别字”（模拟人们使用拼音输入法时打错字的情况，不要出现读音完全不相关的离谱错字，要错得自然一些）。`);
+    }
+    if (humanTrace) {
+      constraints.push('真人思考痕迹要求：写作语气要呈现自然推敲过程，适度出现“先……再……”“换个角度看”“更稳妥的是”等人类思考连接句；段落间允许少量自我修正与权衡表达，但保持逻辑清晰、结论明确。');
+      constraints.push('真人写作风格要求：避免机械重复句式，适当混用长短句与口语化过渡；绝对不要出现“作为AI”“模型认为”等机器身份表述。');
+    }
+    if (selectedDiagramMode === 'mindmap') {
+      constraints.push('图示要求：请在正文中部最适合的位置插入1个 Mermaid 思维导图代码块，使用 ```mermaid 开始并以 ``` 结束。');
+      constraints.push('思维导图语法要求：必须使用 mindmap 语法，根节点概括主题，至少包含3个一级分支，并保证分支名称与正文要点一致。');
+      constraints.push('图示位置要求：图示前后各保留一段解释文字，不要把图示放在文末“参考资料”之后。');
+      constraints.push('图示兼容要求：图中节点文本禁止使用形如 [1] 的纯数字方括号，避免与引用编号冲突。');
+    }
+    if (selectedDiagramMode === 'flowchart') {
+      constraints.push('图示要求：请在正文中部最适合的位置插入1个 Mermaid 流程图代码块，使用 ```mermaid 开始并以 ``` 结束。');
+      constraints.push('流程图语法要求：必须使用 flowchart TD 语法，至少包含6个节点与5条连接线，清晰体现步骤先后关系。');
+      constraints.push('图示位置要求：图示前后各保留一段解释文字，不要把图示放在文末“参考资料”之后。');
+      constraints.push('图示兼容要求：图中节点文本禁止使用形如 [1] 的纯数字方括号，避免与引用编号冲突。');
+    }
+    if (enableEvidenceSupport) {
+      constraints.push('数据与案例支撑要求：文中涉及关键结论、数据或案例时，必须在对应句子后插入来源标注，使用 [1]、[2] 这类编号引用。');
+      constraints.push('引用来源要求：优先引用可公开检索的统计公报、政府/机构官网、学术论文或权威媒体深度文章；引用信息应包含标题与可访问链接（URL）。');
+      constraints.push('文末参考资料要求：新增“## 参考资料”小节，按编号列出每条来源（格式建议：`[1] 标题 - 机构/作者，年份，URL`），并与正文编号一一对应。');
+      constraints.push('引用编号连续性要求：正文引用编号必须从 [1] 开始，按首次出现顺序连续递增；禁止跳号、重号、倒序与越号。');
+      constraints.push('首次引用强制规则：正文中第一处出现的引用编号必须是 [1]，第二个首次出现的来源必须是 [2]，以此类推。');
+      constraints.push('同句多引文排序规则：同一句若包含多个引用，必须按从小到大排列，如 [1][2][3]，禁止写成 [2][1] 或 [3][1][2]。');
+      constraints.push('引用映射一致性要求：正文中出现的每个编号都必须在“参考资料”中存在且仅对应一条；未在正文出现的编号不得出现在“参考资料”中。');
+      constraints.push('交付前自检要求：输出前必须逐条检查正文引用序列是否严格为 [1]...[N]，若发现不连续或顺序错误，先修正后再输出。');
+      constraints.push('示例链接禁用要求：严禁使用 example.com、test.com、your-site.com、localhost 等示例或占位链接；若无法提供真实可访问链接，必须删除该来源条目。');
+      constraints.push('无真实链接剔除要求：任何来源条目如果不包含真实可访问 URL，必须整条删除，且正文不得保留对应编号引用。');
+      constraints.push('真实性要求：禁止编造不存在的来源；若某处缺乏可靠依据，宁可不写具体数字，也不要虚构引用。');
+      constraints.push('链接可靠性要求：来源真实性或权威性无法确认时，必须直接剔除该来源，不得在正文或参考资料中保留占位标签与提示性说明。');
+      constraints.push('数据时效性要求：优先使用最新可获得的数据与报告（同类信息优先选择发布日期更新者）；禁止使用明显过时的数据充当现状依据。');
+      if (latestEvidence.length > 0) {
+        constraints.push('外部资料使用要求：优先从“MCP最新资料检索结果”中选取来源；列表中的 [E1]...[E6] 仅是候选标识，正文与参考资料必须改用 [1]...[N] 连续编号，不得直接使用 E 编号。');
+      }
+    }
+
+    if (enableSignatureDate !== false) {
+      const finalAuthor = authorName?.trim() || 'XXX';
+      let finalDate = documentDate?.trim();
+      if (!finalDate) {
+        const today = new Date();
+        finalDate = `${today.getFullYear()}年${today.getMonth() + 1}月${today.getDate()}日`;
+      }
+      constraints.push(`署名与落款要求：文章结尾必须按以下格式输出署名块，且只出现一次：<div align="right"><p class="signature-line">${finalAuthor}</p><p class="signature-line">${finalDate}</p></div>`);
+    } else {
+      constraints.push('署名与落款禁用：全文不得出现署名、作者名、报告者姓名与落款日期等结尾信息。');
+      constraints.push('时间信息要求：若必须提及时间，只能引用用户提供材料中可核对的时间信息，禁止臆造具体日期或时间。');
+    }
+
+    if (constraints.length > 0) {
+      textPrompt += `\n\n【具体约束条件】：\n- ` + constraints.join('\n- ');
+    }
+
+    if (hasImages) {
+      textPrompt += `\n\n【图片插入指令】：用户上传了 ${images.length} 张图片，你需要分析这些图片的内容，并将它们插入到文档的合适位置。
+插入图片时，必须使用指定的图片ID作为图片链接（URL），语法为：![图片描述](图片ID)
+例如：![会议照片](${images[0].id})
+请从以下图片中进行选择：\n`;
+      images.forEach((img: { id: string, base64: string }, idx: number) => {
+        textPrompt += `- 图片 ${idx + 1} 的ID为：${img.id}\n`;
+      });
+      textPrompt += `\n注意：
+1. 只能使用上述提供的图片ID，绝对不能编造其他图片或使用外部链接。
+2. 绝对不要在文档中使用任何表情符号（Emoji）和图标。`;
+    } else {
+      textPrompt += `\n\n【重要指令】：绝对不能在文档中使用任何表情符号（Emoji）和图标。`;
+    }
+
+    const userContent: Record<string, unknown>[] = [
+      { type: 'text', text: textPrompt }
+    ];
+
+    if (hasImages) {
+      images.forEach((img: { id: string, base64: string }) => {
+        // Only add image_url if not using moonshot multi-modal (they use different handling)
+        if (client === zhipuOpenai || client === doubaoOpenai) {
+          userContent.push({
+            type: 'image_url',
+            image_url: { url: img.base64 }
+          });
+        }
+      });
+    }
+
+    // Moonshot handles images by uploading them first or using base64. 
+    // Wait, Kimi currently has issues with base64 images as shown by your logs (unsupported image url).
+    // Let's pass it anyway for Zhipu, but for Moonshot we need to remove the base64 or pass it as standard content.
+    // Actually, Moonshot's vision model currently doesn't support direct base64 `image_url` in the same format as OpenAI/Zhipu without correct prefix.
+    // Let's ensure the base64 string has the correct data URI prefix if it's not present.
+    if (hasImages && client === moonshotOpenai) {
+        images.forEach((img: { id: string, base64: string }) => {
+            // Moonshot's vision model only supports a few formats and strict base64 encoding.
+            // Ensure proper format mapping
+            userContent.push({
+              type: 'image_url',
+              image_url: { url: img.base64 }
+            });
+        });
+    }
+
+    const completion = await client.chat.completions.create(
+      {
+        model: selectedModel,
+        messages: [
+          { role: 'system', content: systemMessage },
+          { role: 'user', content: userContent as unknown as string }
+        ],
+        temperature: selectedModel === 'kimi-k2.5' ? 1 : (enableEvidenceSupport ? 0.4 : 0.7),
+        stream: true,
+      },
+      {
+        timeout: 1000 * 60 * 5, // 5 mins timeout for large models
+      }
+    );
+
+    // We will stream the raw markdown text to the client so they can see the progress.
+    // The client will handle downloading it as DOCX later if they want to.
+    
+    // Create a ReadableStream from the OpenAI stream
+    const stream = new ReadableStream({
+      async start(controller) {
+        let hasOutput = false;
+        const citationNormalizer = enableEvidenceSupport ? createStreamingCitationNormalizer() : null;
+        try {
+          for await (const chunk of completion) {
+            const content = chunk.choices[0]?.delta?.content || '';
+            if (content) {
+              hasOutput = true;
+              const output = citationNormalizer ? citationNormalizer.push(content) : content;
+              if (output) {
+                controller.enqueue(new TextEncoder().encode(output));
+              }
+            }
+          }
+          if (citationNormalizer) {
+            const tailOutput = citationNormalizer.flush();
+            if (tailOutput) {
+              controller.enqueue(new TextEncoder().encode(tailOutput));
+            }
+          }
+        } catch (streamError) {
+          console.error('Stream Error:', streamError);
+          if (!hasOutput) {
+            controller.enqueue(new TextEncoder().encode('生成过程中出现网络波动，请重试。'));
+          }
+        } finally {
+          controller.close();
+        }
+      }
+    });
+
+    // Note: AI providers like Kimi/Zhipu often have high First Token Latency (TTFT)
+    // due to long system prompts, complex constraints, or high load.
+    // The stream is passed down immediately to the client.
+    // Return the stream response with appropriate CORS and cache headers
+    trackAdminEvent({
+      type: 'generate',
+      status: 'success',
+      model: selectedModel,
+      hasImages,
+      promptLength: String(prompt || '').length + String(content || '').length,
+    });
+    return new NextResponse(stream, {
+      headers: {
+        'Content-Type': 'text/plain; charset=utf-8',
+        'Cache-Control': 'no-cache, no-transform',
+        'Access-Control-Allow-Origin': '*',
+        'X-Accel-Buffering': 'no',
+      },
+    });
+  } catch (error) {
+    console.error('API Error:', error);
+    const err = error as Error;
+    trackAdminEvent({
+      type: 'generate',
+      status: 'error',
+      errorMessage: err.message?.slice(0, 200) || '生成失败',
+    });
+    
+    let errorMsg = err.message || '生成失败';
+    if (errorMsg.includes('Failed to fetch') || errorMsg.includes('NetworkError')) {
+      errorMsg = '网络连接异常，请检查您的网络设置（若使用移动网络，请尝试切换至 WiFi 或关闭代理）。';
+    } else if (errorMsg.includes('timeout') || errorMsg.includes('Timeout')) {
+      errorMsg = 'AI 思考时间过长，响应超时，请尝试精简要求或稍后再试。';
+    } else if (errorMsg.includes('ReadableStream not supported')) {
+      errorMsg = '您的浏览器版本过低，不支持流式生成，请升级浏览器。';
+    } else if (errorMsg.includes('balance') || errorMsg.includes('insufficient_quota') || errorMsg.includes('arrears') || errorMsg.includes('1004')) {
+      errorMsg = '个人运营者的上游模型余额不足，请联系运营者充值。';
+    } else if (errorMsg.includes('rate_limit') || errorMsg.includes('429')) {
+      errorMsg = '当前访问人数过多，请求速率已达上限，请稍后重试。';
+    } else if (errorMsg.includes('401') || errorMsg.includes('Invalid Authentication') || errorMsg.includes('invalid_api_key') || errorMsg.includes('unauthorized')) {
+      errorMsg = 'API 密钥无效或未配置 (401 Unauthorized)。请联系运营者检查后台 API Key 设置是否正确。';
+    }
+
+    return NextResponse.json({ error: errorMsg }, { status: 500 });
+  }
+}

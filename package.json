@@ -1,0 +1,47 @@
+{
+  "name": "ai-doc-beautify",
+  "version": "1.0.0",
+  "private": true,
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build --webpack",
+    "start": "next start",
+    "lint": "eslint"
+  },
+  "dependencies": {
+    "@chevrotain/cst-dts-gen": "^12.0.0",
+    "@tailwindcss/typography": "^0.5.19",
+    "better-sqlite3": "^12.9.0",
+    "canvg": "^4.0.3",
+    "clsx": "^2.1.1",
+    "docx": "^9.6.1",
+    "framer-motion": "^12.38.0",
+    "html-to-docx": "^1.8.0",
+    "lucide-react": "^1.8.0",
+    "mammoth": "^1.12.0",
+    "markdown-to-jsx": "^9.7.15",
+    "marked": "^18.0.0",
+    "mermaid": "^11.12.1",
+    "next": "16.2.3",
+    "openai": "^6.34.0",
+    "plyr": "^3.8.4",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "tailwind-merge": "^3.5.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/marked": "^5.0.2",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.2.3",
+    "tailwindcss": "^4",
+    "typescript": "^5"
+  }
+}
