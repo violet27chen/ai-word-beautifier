@@ -18,6 +18,7 @@ function buildEnvStatus() {
     zhipu: Boolean(process.env.ZHIPU_API_KEY?.trim()),
     moonshot: Boolean(process.env.MOONSHOT_API_KEY?.trim()),
     deepseek: Boolean(process.env.DEEPSEEK_API_KEY?.trim()),
+    mimo: Boolean(process.env.MIMO_API_KEY?.trim()),
     doubao: Boolean((process.env.DOUBAO_API_KEY || process.env.ARK_API_KEY || '').trim()),
     dashscope: Boolean(process.env.DASHSCOPE_API_KEY?.trim()),
     mcpSearch: Boolean(process.env.MCP_SEARCH_ENDPOINT?.trim()),

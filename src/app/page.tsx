@@ -1,11 +1,10 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { Download, Loader2, FileText, Settings, Wand2, AlertCircle, Upload, ImagePlus, X, ChevronDown, ChevronUp, Maximize2, Minimize2, SlidersHorizontal, Copy, Check, Gift, RefreshCw } from 'lucide-react';
+import { Download, Loader2, FileText, Settings, Wand2, AlertCircle, Upload, ImagePlus, X, ChevronDown, ChevronUp, Maximize2, Minimize2, SlidersHorizontal, Copy, Check } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import Markdown from 'markdown-to-jsx';
-import WelfareVideoPlayer from './welfare-video-player';
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -17,11 +16,14 @@ type ModelOption = {
   supportsImage: boolean;
 };
 
-type NavView = 'beautify' | 'welfare';
-
 const MODELS: ModelOption[] = [
   { value: 'deepseek-v4-flash', label: 'DeepSeek-V4-Flash (默认)', supportsImage: false },
   { value: 'deepseek-v4-pro', label: 'DeepSeek-V4-Pro', supportsImage: false },
+  { value: 'mimo-v2.5-pro', label: 'MiMo-v2.5-pro (小米)', supportsImage: false },
+  { value: 'mimo-v2-pro', label: 'MiMo-v2-pro (小米)', supportsImage: false },
+  { value: 'mimo-v2.5', label: 'MiMo-v2.5 (小米)', supportsImage: false },
+  { value: 'mimo-v2-omni', label: 'MiMo-v2-omni (小米)', supportsImage: false },
+  { value: 'mimo-v2-flash', label: 'MiMo-v2-flash (小米)', supportsImage: false },
   { value: 'kimi-k2.6', label: 'Kimi-K2.6 (多模态)', supportsImage: true },
   { value: 'kimi-k2.5', label: 'Kimi-K2.5 (多模态)', supportsImage: true },
   { value: 'moonshot-v1-8k', label: 'Moonshot-v1-8k', supportsImage: false },
@@ -67,9 +69,6 @@ const DIAGRAM_MODES = [
   { value: 'mindmap', label: '自动思维导图' },
   { value: 'flowchart', label: '自动流程图' },
 ];
-
-const DAILY_WELFARE_VIDEO_URL = process.env.NEXT_PUBLIC_DAILY_WELFARE_VIDEO_URL?.trim() || '/welfare/today.mp4';
-const DAILY_WELFARE_SUBTITLE_URL = process.env.NEXT_PUBLIC_DAILY_WELFARE_SUBTITLE_URL?.trim() || '/welfare/today.zh.vtt';
 
 /* const USDT_DONATION_NETWORK = process.env.NEXT_PUBLIC_USDT_DONATION_NETWORK?.trim() || '';
 const USDT_DONATION_ADDRESS = process.env.NEXT_PUBLIC_USDT_DONATION_ADDRESS?.trim() || ''; */
@@ -158,7 +157,6 @@ function getMammoth() {
 }
 
 export default function Home() {
-  const [activeNav, setActiveNav] = useState<NavView>('beautify');
   const [prompt, setPrompt] = useState('');
   const [content, setContent] = useState('');
   const [model, setModel] = useState(() => {
@@ -223,11 +221,6 @@ export default function Home() {
   const [documentDate, setDocumentDate] = useState('');
   const [refinePrompt, setRefinePrompt] = useState('');
   const [diagramMode, setDiagramMode] = useState('none');
-  const [welfareRefreshKey, setWelfareRefreshKey] = useState(() => Date.now());
-  const [videoLoadError, setVideoLoadError] = useState('');
-
-  const welfareVideoSrc = `${DAILY_WELFARE_VIDEO_URL}${DAILY_WELFARE_VIDEO_URL.includes('?') ? '&' : '?'}t=${welfareRefreshKey}`;
-  const welfareSubtitleSrc = `${DAILY_WELFARE_SUBTITLE_URL}${DAILY_WELFARE_SUBTITLE_URL.includes('?') ? '&' : '?'}t=${welfareRefreshKey}`;
 
   const cleanMarkdown = displayedMarkdown
     .replace(/^```(markdown|html)?\n?/i, '')
@@ -561,7 +554,7 @@ export default function Home() {
       enableSignatureDate,
       authorName,
       documentDate,
-      images: uploadedImages.map(img => ({ id: img.id, base64: img.base64 }))
+      images: uploadedImages.map(img => ({ id: img.id, base64: img.base64 })),
     };
 
     await executeGenerate(
@@ -590,7 +583,7 @@ export default function Home() {
       enableSignatureDate,
       authorName,
       documentDate,
-      images: uploadedImages.map(img => ({ id: img.id, base64: img.base64 }))
+      images: uploadedImages.map(img => ({ id: img.id, base64: img.base64 })),
     };
 
     setRefinePrompt('');
@@ -914,27 +907,8 @@ export default function Home() {
             <h1 className="text-xl font-bold text-gray-900">AI Word 排版美化助手</h1>
           </div>
           <div className="flex items-center gap-3">
-            <div className="rounded-lg bg-gray-100 p-1 flex items-center gap-1">
-              <button
-                type="button"
-                onClick={() => setActiveNav('beautify')}
-                className={cn(
-                  'px-3 py-1.5 rounded-md text-sm font-medium transition-colors',
-                  activeNav === 'beautify' ? 'bg-white text-indigo-700 shadow-sm' : 'text-gray-600 hover:text-gray-900'
-                )}
-              >
-                排版美化
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveNav('welfare')}
-                className={cn(
-                  'px-3 py-1.5 rounded-md text-sm font-medium transition-colors',
-                  activeNav === 'welfare' ? 'bg-white text-indigo-700 shadow-sm' : 'text-gray-600 hover:text-gray-900'
-                )}
-              >
-                每日福利
-              </button>
+            <div className="rounded-lg bg-gray-100 px-3 py-1.5 text-sm font-medium text-indigo-700">
+              排版美化
             </div>
             <div className="px-3 py-1 rounded-full bg-indigo-50 border border-indigo-200 text-indigo-700 text-sm font-semibold hidden md:block">
               新平台启动，全站免费体验中
@@ -945,7 +919,6 @@ export default function Home() {
 
       {/* Main Content */}
       <main className="flex-1 min-h-0 overflow-y-auto lg:overflow-hidden">
-        {activeNav === 'beautify' ? (
         <div className="max-w-[1600px] mx-auto px-4 py-6 h-full flex flex-col lg:flex-row gap-6">
           
           {/* Left Column: Advanced Settings */}
@@ -1134,7 +1107,6 @@ export default function Home() {
                   </p>
                 )}
               </div>
-
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   排版/生成要求 <span className="text-red-500">*</span>
@@ -1434,48 +1406,6 @@ export default function Home() {
             </div>
           </div>
         </div>
-        ) : (
-          <div className="max-w-5xl mx-auto px-4 py-8">
-            <div className="bg-white rounded-xl shadow-sm border border-amber-200 p-6 md:p-8">
-              <div className="flex items-center justify-between gap-3 mb-4">
-                <div className="flex items-center gap-2 text-amber-800">
-                  <Gift className="w-5 h-5" />
-                  <h2 className="text-xl font-semibold text-gray-900">每日视频</h2>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setVideoLoadError('');
-                    setWelfareRefreshKey(Date.now());
-                  }}
-                  className="inline-flex items-center gap-1 rounded-md border border-amber-300 bg-amber-50 px-3 py-1.5 text-sm text-amber-700 hover:bg-amber-100 transition-colors"
-                >
-                  <RefreshCw className="w-4 h-4" />
-                  刷新片源
-                </button>
-              </div>
-              <p className="text-sm text-gray-600 mb-4">
-                每日视频会自动更新，点击播放即可观看当日内容。
-              </p>
-              <WelfareVideoPlayer
-                refreshKey={welfareRefreshKey}
-                videoSrc={welfareVideoSrc}
-                subtitleSrc={welfareSubtitleSrc}
-                onLoadedData={() => setVideoLoadError('')}
-                onError={() => setVideoLoadError('视频暂时无法播放，请点击“刷新片源”重试，或稍后再试。')}
-                className="w-full rounded-lg border border-amber-200 bg-black"
-              />
-              {videoLoadError && (
-                <p className="mt-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
-                  {videoLoadError}
-                </p>
-              )}
-              <p className="mt-3 text-xs text-amber-700">
-                如未显示字幕，请确认字幕文件已就位后点击“刷新片源”重试。
-              </p>
-            </div>
-          </div>
-        )}
       </main>
 
       {/* Footer */}
