@@ -313,30 +313,49 @@ export async function POST(req: Request) {
     const hasImages = images && images.length > 0;
     
     // Determine the provider and model
-    let client = zhipuOpenai;
-    let selectedModel = model || 'glm-4.7';
+    const requestedModel = typeof model === 'string' ? model.trim() : '';
+    const hasDeepseekKey = Boolean(process.env.DEEPSEEK_API_KEY?.trim());
+    const defaultTextModel = hasDeepseekKey ? 'deepseek-v4-flash' : 'glm-4.7';
+    const effectiveModel = requestedModel || defaultTextModel;
+    let client = hasDeepseekKey ? deepseekOpenai : zhipuOpenai;
+    let selectedModel = effectiveModel;
 
-    if (model === 'moonshot-v1-128k' || model === 'kimi-k2-turbo-preview' || model === 'kimi-k2.5') {
+    if (effectiveModel === 'moonshot-v1-128k' || effectiveModel === 'kimi-k2-turbo-preview' || effectiveModel === 'kimi-k2.5') {
       client = moonshotOpenai;
       if (hasImages) {
         selectedModel = 'kimi-k2.5'; // Moonshot multi-modal model
       } else {
-        selectedModel = model;
+        selectedModel = effectiveModel;
       }
-    } else if (model === 'deepseek-chat') {
-      client = deepseekOpenai;
-      // DeepSeek is a pure text model, so if there are images, we fall back to a multi-modal model
-      if (hasImages) {
+    } else if (
+      effectiveModel === 'deepseek-v4-flash' ||
+      effectiveModel === 'deepseek-v4-pro' ||
+      effectiveModel === 'deepseek-chat' ||
+      effectiveModel === 'deepseek-reasoner'
+    ) {
+      if (!hasDeepseekKey) {
         client = zhipuOpenai;
-        selectedModel = 'glm-5v-turbo'; 
+        if (hasImages) {
+          selectedModel = 'glm-5v-turbo';
+        } else {
+          selectedModel = 'glm-4.7';
+        }
       } else {
-        selectedModel = 'deepseek-chat';
+        client = deepseekOpenai;
+        if (hasImages) {
+          client = zhipuOpenai;
+          selectedModel = 'glm-5v-turbo';
+        } else if (effectiveModel === 'deepseek-chat' || effectiveModel === 'deepseek-reasoner') {
+          selectedModel = 'deepseek-v4-flash';
+        } else {
+          selectedModel = effectiveModel;
+        }
       }
-    } else if (model === 'doubao-seed-1-6-flash-250828' || model?.startsWith('ep-')) {
+    } else if (effectiveModel === 'doubao-seed-1-6-flash-250828' || effectiveModel?.startsWith('ep-')) {
       // All Volcengine (Doubao) endpoints start with 'ep-'
       client = doubaoOpenai;
-      selectedModel = model; // Use the specific endpoint ID provided
-    } else if (model === 'qwen3.5-flash') {
+      selectedModel = effectiveModel; // Use the specific endpoint ID provided
+    } else if (effectiveModel === 'qwen3.5-flash') {
       client = dashscopeOpenai;
       if (hasImages) {
         client = zhipuOpenai;
@@ -349,7 +368,7 @@ export async function POST(req: Request) {
       if (hasImages) {
         selectedModel = 'glm-5v-turbo'; // Zhipu multi-modal model
       } else {
-        selectedModel = model || 'glm-4.7';
+        selectedModel = effectiveModel || 'glm-4.7';
       }
     }
 
