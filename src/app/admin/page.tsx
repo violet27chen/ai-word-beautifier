@@ -8,6 +8,7 @@ type EnvStatus = {
   zhipu: boolean;
   moonshot: boolean;
   deepseek: boolean;
+  mimo: boolean;
   doubao: boolean;
   dashscope: boolean;
   mcpSearch: boolean;
@@ -116,6 +117,7 @@ export default function AdminPage() {
       { key: 'Zhipu', value: payload.envStatus.zhipu },
       { key: 'Moonshot', value: payload.envStatus.moonshot },
       { key: 'DeepSeek', value: payload.envStatus.deepseek },
+      { key: 'MiMo', value: payload.envStatus.mimo },
       { key: 'Doubao', value: payload.envStatus.doubao },
       { key: 'DashScope', value: payload.envStatus.dashscope },
       { key: 'MCP Search', value: payload.envStatus.mcpSearch },

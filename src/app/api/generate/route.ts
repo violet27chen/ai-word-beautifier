@@ -298,6 +298,11 @@ export async function POST(req: Request) {
       baseURL: 'https://api.deepseek.com',
     });
 
+    const mimoOpenai = new OpenAI({
+      apiKey: process.env.MIMO_API_KEY || '',
+      baseURL: 'https://api.xiaomimimo.com/v1',
+    });
+
     const doubaoOpenai = new OpenAI({
       apiKey: process.env.DOUBAO_API_KEY || process.env.ARK_API_KEY || '',
       baseURL: 'https://ark.cn-beijing.volces.com/api/v3',
@@ -308,13 +313,14 @@ export async function POST(req: Request) {
       baseURL: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
     });
 
-    const { prompt, content, model, images, wordCount, writingStyle, eduLevel, perfLevel, addTypos, humanTrace, enableEvidenceSupport, diagramMode, enableSignatureDate, authorName, documentDate } = await req.json();
+    const { prompt, content, model, images, wordCount, writingStyle, eduLevel, perfLevel, addTypos, humanTrace, enableEvidenceSupport, diagramMode, enableSignatureDate, authorName, documentDate, temperature, top_p, topP } = await req.json();
     
     const hasImages = images && images.length > 0;
     
     // Determine the provider and model
     const requestedModel = typeof model === 'string' ? model.trim() : '';
     const hasDeepseekKey = Boolean(process.env.DEEPSEEK_API_KEY?.trim());
+    const hasMimoKey = Boolean(process.env.MIMO_API_KEY?.trim());
     const defaultTextModel = hasDeepseekKey ? 'deepseek-v4-flash' : 'glm-4.7';
     const effectiveModel = requestedModel || defaultTextModel;
     let client = hasDeepseekKey ? deepseekOpenai : zhipuOpenai;
@@ -359,6 +365,23 @@ export async function POST(req: Request) {
           selectedModel = effectiveModel;
         }
       }
+    } else if (effectiveModel.startsWith('mimo-')) {
+      if (!hasMimoKey) {
+        client = zhipuOpenai;
+        if (hasImages) {
+          selectedModel = 'glm-5v-turbo';
+        } else {
+          selectedModel = 'glm-4.7';
+        }
+      } else {
+        client = mimoOpenai;
+        if (hasImages) {
+          client = zhipuOpenai;
+          selectedModel = 'glm-5v-turbo';
+        } else {
+          selectedModel = effectiveModel;
+        }
+      }
     } else if (effectiveModel === 'doubao-seed-1-6-flash-250828' || effectiveModel?.startsWith('ep-')) {
       // All Volcengine (Doubao) endpoints start with 'ep-'
       client = doubaoOpenai;
@@ -379,6 +402,24 @@ export async function POST(req: Request) {
         selectedModel = effectiveModel || 'glm-4.7';
       }
     }
+
+    const mimoTemperatureDefault = selectedModel.includes('-tts')
+      ? 0.6
+      : selectedModel.endsWith('-flash')
+        ? 0.3
+        : 1.0;
+    const mimoTemperatureValueRaw = typeof temperature === 'number' ? temperature : Number.NaN;
+    const mimoTopPValueRaw = typeof top_p === 'number'
+      ? top_p
+      : typeof topP === 'number'
+        ? topP
+        : Number.NaN;
+    const mimoTemperatureValue = Number.isFinite(mimoTemperatureValueRaw)
+      ? Math.min(1.5, Math.max(0, mimoTemperatureValueRaw))
+      : mimoTemperatureDefault;
+    const mimoTopPValue = Number.isFinite(mimoTopPValueRaw)
+      ? Math.min(1.0, Math.max(0.01, mimoTopPValueRaw))
+      : 0.95;
 
     const selectedDiagramMode = diagramMode === 'mindmap' || diagramMode === 'flowchart' ? diagramMode : 'none';
     const formatInstruction = selectedDiagramMode === 'none'
@@ -529,16 +570,27 @@ ${formatInstruction}
         });
     }
 
+    const completionMessages: OpenAI.ChatCompletionMessageParam[] = [
+      { role: 'system', content: systemMessage },
+      { role: 'user', content: userContent as unknown as OpenAI.ChatCompletionContentPart[] },
+    ];
+
+    const completionRequest: OpenAI.ChatCompletionCreateParamsStreaming = {
+      model: selectedModel,
+      messages: completionMessages,
+      stream: true,
+      ...(client === mimoOpenai
+        ? {
+          temperature: mimoTemperatureValue,
+          top_p: mimoTopPValue,
+        }
+        : {
+          temperature: selectedModel === 'kimi-k2.5' || selectedModel === 'kimi-k2.6' ? 1 : (enableEvidenceSupport ? 0.4 : 0.7),
+        }),
+    };
+
     const completion = await client.chat.completions.create(
-      {
-        model: selectedModel,
-        messages: [
-          { role: 'system', content: systemMessage },
-          { role: 'user', content: userContent as unknown as string }
-        ],
-        temperature: selectedModel === 'kimi-k2.5' || selectedModel === 'kimi-k2.6' ? 1 : (enableEvidenceSupport ? 0.4 : 0.7),
-        stream: true,
-      },
+      completionRequest,
       {
         timeout: 1000 * 60 * 5, // 5 mins timeout for large models
       }
