@@ -313,7 +313,7 @@ export async function POST(req: Request) {
       baseURL: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
     });
 
-    const { prompt, content, model, images, wordCount, writingStyle, eduLevel, perfLevel, addTypos, humanTrace, enableEvidenceSupport, diagramMode, enableSignatureDate, authorName, documentDate, temperature, top_p, topP } = await req.json();
+    const { prompt, content, model, images, wordCount, writingStyle, eduLevel, perfLevel, addTypos, humanTrace, enableEvidenceSupport, diagramMode, enableSignatureDate, authorName, documentDate } = await req.json();
     
     const hasImages = images && images.length > 0;
     
@@ -408,18 +408,8 @@ export async function POST(req: Request) {
       : selectedModel.endsWith('-flash')
         ? 0.3
         : 1.0;
-    const mimoTemperatureValueRaw = typeof temperature === 'number' ? temperature : Number.NaN;
-    const mimoTopPValueRaw = typeof top_p === 'number'
-      ? top_p
-      : typeof topP === 'number'
-        ? topP
-        : Number.NaN;
-    const mimoTemperatureValue = Number.isFinite(mimoTemperatureValueRaw)
-      ? Math.min(1.5, Math.max(0, mimoTemperatureValueRaw))
-      : mimoTemperatureDefault;
-    const mimoTopPValue = Number.isFinite(mimoTopPValueRaw)
-      ? Math.min(1.0, Math.max(0.01, mimoTopPValueRaw))
-      : 0.95;
+    const mimoTemperatureValue = mimoTemperatureDefault;
+    const mimoTopPValue = 0.95;
 
     const selectedDiagramMode = diagramMode === 'mindmap' || diagramMode === 'flowchart' ? diagramMode : 'none';
     const formatInstruction = selectedDiagramMode === 'none'

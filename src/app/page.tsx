@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect, useMemo } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Download, Loader2, FileText, Settings, Wand2, AlertCircle, Upload, ImagePlus, X, ChevronDown, ChevronUp, Maximize2, Minimize2, SlidersHorizontal, Copy, Check } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -163,8 +163,6 @@ export default function Home() {
     const preferred = 'deepseek-v4-flash';
     return MODELS.some((item) => item.value === preferred) ? preferred : MODELS[0].value;
   });
-  const [mimoTemperature, setMimoTemperature] = useState('');
-  const [mimoTopP, setMimoTopP] = useState('');
   const [isFetching, setIsFetching] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
   const isTypingRef = useRef(false);
@@ -363,22 +361,6 @@ export default function Home() {
   const hasImages = uploadedImages.length > 0;
   const selectedModelOption = MODELS.find(m => m.value === model);
   const visibleModels = hasImages ? MODELS.filter(m => m.supportsImage) : MODELS;
-  const isMimoModel = model.startsWith('mimo-');
-  const mimoDefaults = useMemo(() => {
-    const temperatureDefault = model.includes('-tts')
-      ? 0.6
-      : model.endsWith('-flash')
-        ? 0.3
-        : 1.0;
-    return {
-      temperatureDefault,
-      temperatureMin: 0,
-      temperatureMax: 1.5,
-      topPDefault: 0.95,
-      topPMin: 0.01,
-      topPMax: 1.0,
-    };
-  }, [model]);
 
   useEffect(() => {
     if (!hasImages) return;
@@ -557,11 +539,6 @@ export default function Home() {
       return;
     }
 
-    const mimoParams = isMimoModel ? {
-      temperature: mimoTemperature.trim() && Number.isFinite(Number(mimoTemperature)) ? Number(mimoTemperature) : undefined,
-      top_p: mimoTopP.trim() && Number.isFinite(Number(mimoTopP)) ? Number(mimoTopP) : undefined,
-    } : {};
-
     const payload = {
       prompt,
       content,
@@ -578,7 +555,6 @@ export default function Home() {
       authorName,
       documentDate,
       images: uploadedImages.map(img => ({ id: img.id, base64: img.base64 })),
-      ...mimoParams,
     };
 
     await executeGenerate(
@@ -591,11 +567,6 @@ export default function Home() {
   const handleRefine = async (customPrompt?: string) => {
     const instruction = customPrompt || refinePrompt;
     if (!instruction.trim()) return;
-
-    const mimoParams = isMimoModel ? {
-      temperature: mimoTemperature.trim() && Number.isFinite(Number(mimoTemperature)) ? Number(mimoTemperature) : undefined,
-      top_p: mimoTopP.trim() && Number.isFinite(Number(mimoTopP)) ? Number(mimoTopP) : undefined,
-    } : {};
 
     const payload = {
       prompt: "【后期优化/修改要求】：\n" + instruction + "\n\n请严格基于下方提供的【当前已有内容】进行修改和润色，不要偏离原意，保持原文未要求修改的部分基本不变。",
@@ -613,7 +584,6 @@ export default function Home() {
       authorName,
       documentDate,
       images: uploadedImages.map(img => ({ id: img.id, base64: img.base64 })),
-      ...mimoParams,
     };
 
     setRefinePrompt('');
@@ -1137,47 +1107,6 @@ export default function Home() {
                   </p>
                 )}
               </div>
-              {isMimoModel && (
-                <div className="grid grid-cols-1 gap-4 rounded-lg border border-gray-200 bg-gray-50/60 p-4 sm:grid-cols-2">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      temperature
-                    </label>
-                    <input
-                      type="number"
-                      min={mimoDefaults.temperatureMin}
-                      max={mimoDefaults.temperatureMax}
-                      step="0.01"
-                      value={mimoTemperature}
-                      onChange={(e) => setMimoTemperature(e.target.value)}
-                      placeholder={`默认 ${mimoDefaults.temperatureDefault}`}
-                      className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-gray-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
-                    />
-                    <p className="mt-1 text-xs text-gray-500">
-                      范围 [{mimoDefaults.temperatureMin}, {mimoDefaults.temperatureMax}]
-                    </p>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      top_p
-                    </label>
-                    <input
-                      type="number"
-                      min={mimoDefaults.topPMin}
-                      max={mimoDefaults.topPMax}
-                      step="0.01"
-                      value={mimoTopP}
-                      onChange={(e) => setMimoTopP(e.target.value)}
-                      placeholder={`默认 ${mimoDefaults.topPDefault}`}
-                      className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-gray-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
-                    />
-                    <p className="mt-1 text-xs text-gray-500">
-                      范围 [{mimoDefaults.topPMin}, {mimoDefaults.topPMax}]
-                    </p>
-                  </div>
-                </div>
-              )}
-
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   排版/生成要求 <span className="text-red-500">*</span>
