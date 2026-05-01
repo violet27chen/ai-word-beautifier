@@ -21,7 +21,7 @@ const MODELS: ModelOption[] = [
   { value: 'deepseek-v4-pro', label: 'DeepSeek-V4-Pro', supportsImage: false },
   { value: 'mimo-v2.5-pro', label: 'MiMo-v2.5-pro (小米)', supportsImage: false },
   { value: 'mimo-v2-pro', label: 'MiMo-v2-pro (小米)', supportsImage: false },
-  { value: 'mimo-v2.5', label: 'MiMo-v2.5 (小米)', supportsImage: false },
+  { value: 'mimo-v2.5', label: 'MiMo-v2.5 (小米)', supportsImage: true },
   { value: 'mimo-v2-omni', label: 'MiMo-v2-omni (小米)', supportsImage: false },
   { value: 'mimo-v2-flash', label: 'MiMo-v2-flash (小米)', supportsImage: false },
   { value: 'kimi-k2.6', label: 'Kimi-K2.6 (多模态)', supportsImage: true },

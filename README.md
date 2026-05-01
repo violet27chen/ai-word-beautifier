@@ -46,7 +46,7 @@
 
 - **默认模型**：若配置了 `DEEPSEEK_API_KEY`，默认使用 `deepseek-v4-flash`；否则默认使用 `glm-4.7`。
 - **图片输入**：当请求包含图片且目标模型不支持多模态时，会回退到可用的多模态模型（通常为 `glm-5v-turbo` 或 Kimi 多模态模型）。
-- **MiMo 模型**：当 `model` 以 `mimo-` 开头时，优先使用小米 MiMo 的兼容接口；若未配置 `MIMO_API_KEY` 或输入包含图片，则回退到智谱可用模型。
+- **MiMo 模型**：当 `model` 以 `mimo-` 开头时，优先使用小米 MiMo 的兼容接口；若未配置 `MIMO_API_KEY`，则回退到智谱可用模型。当前默认仅 `mimo-v2.5` 会在包含图片时继续走 MiMo，其余 `mimo-*` 在包含图片时回退到智谱多模态模型。
 - **Moonshot/Kimi 模型**：当 `model` 以 `moonshot-v1-` 或 `kimi-` 开头时使用 Moonshot/Kimi；当包含图片但选择了纯文本 Moonshot 模型时，会自动切换到对应的 `-vision-preview` 或默认多模态模型。
 - **豆包模型**：支持 `doubao-seed-1-6-flash-250828`，以及以 `ep-` 开头的 Volcengine Endpoint ID。
 - **DashScope（百炼）**：当前内置 `qwen3.5-flash`（通过兼容接口接入）；当包含图片时回退到智谱多模态模型。
@@ -142,6 +142,113 @@ curl -N -X POST "http://localhost:3000/api/generate" \
     "enableSignatureDate": true,
     "authorName": "张三",
     "documentDate": "2026年5月1日"
+  }'
+```
+
+MiMo 官方接口示例（直接调用 MiMo，不经过本项目服务端）：
+
+单图 + 文本（图片 URL）：
+
+```bash
+curl --location --request POST "https://api.xiaomimimo.com/v1/chat/completions" \
+  --header "api-key: $MIMO_API_KEY" \
+  --header "Content-Type: application/json" \
+  --data-raw '{
+    "model": "mimo-v2.5",
+    "messages": [
+      {
+        "role": "system",
+        "content": "You are MiMo, an AI assistant developed by Xiaomi."
+      },
+      {
+        "role": "user",
+        "content": [
+          {
+            "type": "image_url",
+            "image_url": {
+              "url": "https://example-files.cnbj1.mi-fds.com/example-files/image/image_example.png"
+            }
+          },
+          {
+            "type": "text",
+            "text": "please describe the content of the image"
+          }
+        ]
+      }
+    ],
+    "max_completion_tokens": 1024
+  }'
+```
+
+单图 + 文本（base64 data URL）：
+
+```bash
+curl --location --request POST "https://api.xiaomimimo.com/v1/chat/completions" \
+  --header "api-key: $MIMO_API_KEY" \
+  --header "Content-Type: application/json" \
+  --data-raw '{
+    "model": "mimo-v2.5",
+    "messages": [
+      {
+        "role": "system",
+        "content": "You are MiMo, an AI assistant developed by Xiaomi."
+      },
+      {
+        "role": "user",
+        "content": [
+          {
+            "type": "image_url",
+            "image_url": {
+              "url": "data:{MIME_TYPE};base64,$BASE64_IMAGE"
+            }
+          },
+          {
+            "type": "text",
+            "text": "please describe the content of the image"
+          }
+        ]
+      }
+    ],
+    "max_completion_tokens": 1024
+  }'
+```
+
+双图对比：
+
+```bash
+curl --location --request POST "https://api.xiaomimimo.com/v1/chat/completions" \
+  --header "api-key: $MIMO_API_KEY" \
+  --header "Content-Type: application/json" \
+  --data-raw '{
+    "model": "mimo-v2.5",
+    "messages": [
+      {
+        "role": "system",
+        "content": "You are MiMo, an AI assistant developed by Xiaomi."
+      },
+      {
+        "role": "user",
+        "content": [
+          {
+            "type": "image_url",
+            "image_url": {
+              "url": "https://example-files.cnbj1.mi-fds.com/example-files/image/image_example.png"
+            }
+          },
+          {
+            "type": "image_url",
+            "image_url": {
+              "url": "data:{MIME_TYPE};base64,$BASE64_IMAGE"
+            }
+          },
+          {
+            "type": "text",
+            "text": "please describe the connections and differences between these two pictures"
+          }
+        ]
+      }
+    ],
+    "max_completion_tokens": 1024
   }'
 ```
 

@@ -4,6 +4,25 @@ import { trackAdminEvent } from '@/lib/admin-metrics';
 
 export const maxDuration = 300; // Allow 5 mins for large models + vision
 
+class MimoOpenAI extends OpenAI {
+  private mimoApiKey: string;
+
+  constructor(options: ConstructorParameters<typeof OpenAI>[0] & { mimoApiKey: string }) {
+    const { mimoApiKey, ...rest } = options;
+    super(rest);
+    this.mimoApiKey = mimoApiKey;
+  }
+
+  protected async prepareRequest(request: RequestInit) {
+    const headers = new Headers(request.headers as HeadersInit);
+    headers.delete('Authorization');
+    if (this.mimoApiKey) {
+      headers.set('api-key', this.mimoApiKey);
+    }
+    request.headers = headers;
+  }
+}
+
 type EvidenceItem = {
   title: string;
   url: string;
@@ -298,8 +317,9 @@ export async function POST(req: Request) {
       baseURL: 'https://api.deepseek.com',
     });
 
-    const mimoOpenai = new OpenAI({
+    const mimoOpenai = new MimoOpenAI({
       apiKey: process.env.MIMO_API_KEY || '',
+      mimoApiKey: process.env.MIMO_API_KEY || '',
       baseURL: 'https://api.xiaomimimo.com/v1',
     });
 
@@ -323,6 +343,7 @@ export async function POST(req: Request) {
     const hasMimoKey = Boolean(process.env.MIMO_API_KEY?.trim());
     const defaultTextModel = hasDeepseekKey ? 'deepseek-v4-flash' : 'glm-4.7';
     const effectiveModel = requestedModel || defaultTextModel;
+    const mimoSupportsVision = effectiveModel === 'mimo-v2.5';
     let client = hasDeepseekKey ? deepseekOpenai : zhipuOpenai;
     let selectedModel = effectiveModel;
 
@@ -375,7 +396,7 @@ export async function POST(req: Request) {
         }
       } else {
         client = mimoOpenai;
-        if (hasImages) {
+        if (hasImages && !mimoSupportsVision) {
           client = zhipuOpenai;
           selectedModel = 'glm-5v-turbo';
         } else {
@@ -535,7 +556,7 @@ ${formatInstruction}
     if (hasImages) {
       images.forEach((img: { id: string, base64: string }) => {
         // Only add image_url if not using moonshot multi-modal (they use different handling)
-        if (client === zhipuOpenai || client === doubaoOpenai) {
+        if (client === zhipuOpenai || client === doubaoOpenai || client === mimoOpenai) {
           userContent.push({
             type: 'image_url',
             image_url: { url: img.base64 }
