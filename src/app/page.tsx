@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo, memo } from 'react';
 import { Download, Loader2, FileText, Settings, Wand2, AlertCircle, Upload, ImagePlus, X, ChevronDown, ChevronUp, Maximize2, Minimize2, SlidersHorizontal, Copy, Check } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -137,7 +137,7 @@ function useDebouncedValue<T>(value: T, delayMs: number) {
   return debounced;
 }
 
-function MermaidDiagram({ code, locale }: { code: string; locale: Locale }) {
+const MermaidDiagram = memo(function MermaidDiagram({ code, locale }: { code: string; locale: Locale }) {
   const [svg, setSvg] = useState('');
   const [renderError, setRenderError] = useState('');
   const chartCode = code.trim();
@@ -178,6 +178,53 @@ function MermaidDiagram({ code, locale }: { code: string; locale: Locale }) {
     return <div className="my-3 rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-500">{locale === 'zh' ? '图示渲染中...' : 'Rendering diagram...'}</div>;
   }
   return <div className="mermaid-diagram my-3 overflow-x-auto rounded-md border border-gray-200 bg-white p-2" dangerouslySetInnerHTML={{ __html: svg }} />;
+});
+
+function createMarkdownOverrides(args: {
+  imageClassName: string;
+  uploadedImages: ReadonlyArray<{ id: string; base64: string }>;
+  locale: Locale;
+}) {
+  const { imageClassName, uploadedImages, locale } = args;
+  return {
+    img: {
+      component: ({ alt, src, ...props }: React.ImgHTMLAttributes<HTMLImageElement>) => {
+        let resolvedSrc = src;
+        const matchedImg = uploadedImages.find((img) => img.id === src);
+        if (matchedImg) {
+          resolvedSrc = matchedImg.base64;
+        }
+        const ImgElement = 'img';
+        return (
+          <ImgElement
+            alt={alt}
+            src={resolvedSrc}
+            className={cn('rounded-lg shadow-sm border border-gray-200 object-contain mx-auto', imageClassName)}
+            {...props}
+          />
+        );
+      },
+    },
+    pre: {
+      component: ({ children, ...props }: React.HTMLAttributes<HTMLPreElement>) => {
+        const firstChild = Array.isArray(children) ? children[0] : children;
+        if (firstChild && typeof firstChild === 'object' && 'props' in firstChild) {
+          const codeNode = firstChild as React.ReactElement<{ className?: string; children?: React.ReactNode }>;
+          const className = codeNode.props.className || '';
+          const codeContent = Array.isArray(codeNode.props.children)
+            ? codeNode.props.children.join('')
+            : String(codeNode.props.children ?? '');
+          if (className.includes('language-mermaid')) {
+            return <MermaidDiagram code={codeContent} locale={locale} />;
+          }
+          if (/^mermaid\s*\n/i.test(codeContent)) {
+            return <MermaidDiagram code={codeContent.replace(/^mermaid\s*\n/i, '')} locale={locale} />;
+          }
+        }
+        return <pre {...props}>{children}</pre>;
+      },
+    },
+  };
 }
 
 function getMammoth() {
@@ -1189,45 +1236,17 @@ export default function Home() {
     }
   };
 
-  const createMarkdownOverrides = (imageClassName: string) => ({
-    img: {
-      component: ({ alt, src, ...props }: React.ImgHTMLAttributes<HTMLImageElement>) => {
-        let resolvedSrc = src;
-        const matchedImg = uploadedImages.find(img => img.id === src);
-        if (matchedImg) {
-          resolvedSrc = matchedImg.base64;
-        }
-        const ImgElement = 'img';
-        return (
-          <ImgElement
-            alt={alt}
-            src={resolvedSrc}
-            className={cn("rounded-lg shadow-sm border border-gray-200 object-contain mx-auto", imageClassName)}
-            {...props}
-          />
-        );
-      }
-    },
-    pre: {
-      component: ({ children, ...props }: React.HTMLAttributes<HTMLPreElement>) => {
-        const firstChild = Array.isArray(children) ? children[0] : children;
-        if (firstChild && typeof firstChild === 'object' && 'props' in firstChild) {
-          const codeNode = firstChild as React.ReactElement<{ className?: string; children?: React.ReactNode }>;
-          const className = codeNode.props.className || '';
-          const codeContent = Array.isArray(codeNode.props.children)
-            ? codeNode.props.children.join('')
-            : String(codeNode.props.children ?? '');
-          if (className.includes('language-mermaid')) {
-            return <MermaidDiagram code={codeContent} locale={locale} />;
-          }
-          if (/^mermaid\s*\n/i.test(codeContent)) {
-            return <MermaidDiagram code={codeContent.replace(/^mermaid\s*\n/i, '')} locale={locale} />;
-          }
-        }
-        return <pre {...props}>{children}</pre>;
-      }
-    }
-  });
+  const markdownOverridesSmall = useMemo(() => createMarkdownOverrides({
+    imageClassName: 'max-h-64',
+    uploadedImages,
+    locale,
+  }), [uploadedImages, locale]);
+
+  const markdownOverridesLarge = useMemo(() => createMarkdownOverrides({
+    imageClassName: 'max-h-96',
+    uploadedImages,
+    locale,
+  }), [uploadedImages, locale]);
 
   return (
     <div className="min-h-screen bg-gray-50/50 flex flex-col">
@@ -1683,7 +1702,7 @@ export default function Home() {
                     {displayedMarkdown ? (
                       <Markdown
                         options={{
-                          overrides: createMarkdownOverrides('max-h-64')
+                          overrides: markdownOverridesSmall
                         }}
                       >
                         {normalizedMarkdown}
@@ -1971,7 +1990,7 @@ export default function Home() {
                 <div className="word-preview-page prose prose-base">
                   <Markdown
                     options={{
-                      overrides: createMarkdownOverrides('max-h-96')
+                      overrides: markdownOverridesLarge
                     }}
                   >
                     {normalizedMarkdown}
