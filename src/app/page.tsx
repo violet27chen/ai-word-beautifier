@@ -238,6 +238,7 @@ export default function Home() {
   const [documentDate, setDocumentDate] = useState('');
   const [refinePrompt, setRefinePrompt] = useState('');
   const [diagramMode, setDiagramMode] = useState('none');
+  const [templatePreset, setTemplatePreset] = useState('');
 
   useEffect(() => {
     setLocale(resolvePreferredLocale());
@@ -258,12 +259,12 @@ export default function Home() {
       trustDocx: 'Export .docx',
       trustPrivacy: 'Privacy-first',
       templatesTitle: 'Quick templates',
-      templatesHint: 'Pick a template to start with an optimized instruction prompt.',
+      templatesHint: 'Choose a document type. We’ll turn your short input into a structured Word-ready doc.',
       generationSettings: 'Generation Settings',
       chooseModel: 'Model',
       modelHintVisionOnly: 'Images uploaded: only multimodal models are available in the dropdown.',
-      promptLabel: 'Instructions',
-      promptPlaceholder: 'Example: Write a project proposal. Keep it professional and well-structured with headings, lists, and a conclusion.',
+      promptLabel: 'Describe the document you want to create',
+      promptPlaceholder: 'Paste a few sentences or bullet points (short is fine). We’ll expand and format it into a full document.',
       contentCardTitle: 'Source Content (Optional)',
       contentFilled: 'Added',
       contentHint: 'Paste text or upload a .docx to beautify an existing document.',
@@ -302,7 +303,7 @@ export default function Home() {
       privacy: 'Privacy',
       agreementBrackets: 'Terms',
       privacyBrackets: 'Privacy Policy',
-      errorNeedPrompt: 'Please enter instructions.',
+      errorNeedPrompt: 'Please enter some content (a short note is enough).',
       errorUploadDocxOnly: 'Only .docx files are supported.',
       errorReadDocx: 'Failed to read document: ',
       errorDownload: 'Download failed.',
@@ -327,12 +328,12 @@ export default function Home() {
       trustDocx: '导出 .docx',
       trustPrivacy: '隐私优先',
       templatesTitle: '快捷模板',
-      templatesHint: '点击模板会自动填充更适合的指令，便于快速开始。',
+      templatesHint: '选择文档类型：你只需输入简短内容，我们会自动扩写并排版成 Word。',
       generationSettings: '生成设置',
       chooseModel: '选择模型',
       modelHintVisionOnly: '已上传图片：下拉框仅显示支持图片理解的多模态模型。',
-      promptLabel: '排版/生成要求',
-      promptPlaceholder: '例如：请帮我写一份关于 AI 技术在医疗领域应用的商业计划书，要求排版专业，包含标题、正文、列表和总结...',
+      promptLabel: '请输入你需要制作的文档内容',
+      promptPlaceholder: '输入几句话或要点即可（越短也可以）。例如：产品介绍要点、会议要点、方案的核心想法...',
       contentCardTitle: '原始内容 (可选)',
       contentFilled: '已填写',
       contentHint: '如需美化已有文档，请展开粘贴文本或上传',
@@ -371,7 +372,7 @@ export default function Home() {
       privacy: '隐私政策',
       agreementBrackets: '《用户协议》',
       privacyBrackets: '《隐私政策》',
-      errorNeedPrompt: '请输入排版或生成要求',
+      errorNeedPrompt: '请输入一些内容（简短要点也可以）',
       errorUploadDocxOnly: '仅支持 .docx 格式的 Word 文档',
       errorReadDocx: '读取文档失败：',
       errorDownload: '下载失败',
@@ -429,62 +430,75 @@ export default function Home() {
       { value: 'flowchart', label: 'Flowchart' },
     ];
 
+  const defaultPreset = locale === 'zh'
+    ? '你将收到用户输入的一段简短内容（几句话或要点）。请将它扩写并排版为一份结构清晰、格式专业、可直接导出为 Word 的文档：\n- 使用分层标题（##/###）与列表\n- 适度加粗重点\n- 语气专业、逻辑清晰\n- 不要把整篇内容包进 ```markdown/```html 代码块'
+    : 'You will receive a short user input (a few sentences or bullet points). Expand it and format it into a clean, professional, Word-ready document:\n- Use headings (##/###) and lists\n- Bold key points when helpful\n- Keep tone professional and clear\n- Do not wrap the whole answer in ```markdown/```html code fences';
+
   const templates = locale === 'zh'
     ? [
       {
-        title: '把内容排版成报告',
-        description: '自动加标题、分段、列表与重点加粗，输出可下载 Word。',
-        prompt: '请将我提供的内容重新排版为一份结构清晰、格式专业的报告：\n- 使用分层标题（##/###）与列表\n- 段落之间逻辑顺畅，适度加粗重点\n- 输出可直接导出为 Word 的 Markdown（不要使用 ```markdown 或 ```html 代码块）',
+        title: '整理成报告',
+        description: '几句话/要点 → 结构化报告（含标题、要点与总结）。',
+        seed: '主题：智能手机的发展\n要点：\n- 起源：大哥大、IBM Simon、Palm/黑莓\n- 关键变革：iOS/Android、芯片、屏幕与影像\n- 现代场景：支付、社交、AI 助手、物联网\n- 趋势：折叠屏、卫星通信、隐私监管、可持续',
+        preset: '请把用户输入扩写并排版成一份报告，结构包含：概述、发展阶段（按时间线）、关键里程碑、现状与应用场景、未来趋势与挑战、总结。要求条理清晰、可读性强。',
+        diagramMode: 'mindmap',
+      },
+      {
+        title: '会议纪要',
+        description: '把零散记录整理为摘要/决策/行动项。',
+        seed: '会议：产品需求评审\n要点：\n- 目标：5 月上线 MVP\n- 决策：先做登录+付费墙\n- 风险：模型成本、合规\n- 下一步：UI 走查、埋点方案',
+        preset: '请把用户输入整理为会议纪要，输出：会议摘要、关键决策、行动项（负责人/截止时间如未提供则留空）、风险与待确认问题。',
         diagramMode: 'none',
       },
       {
-        title: '会议纪要 → 行动项',
-        description: '把原始纪要整理为摘要、决策与 Action Items。',
-        prompt: '请将我提供的会议纪要整理成可执行的版本：\n1) 会议摘要\n2) 关键决策\n3) 行动项（负责人/截止时间若未提供则留空）\n4) 风险与待确认问题\n要求结构清晰、要点列表化。',
-        diagramMode: 'none',
-      },
-      {
-        title: '方案/提案文档',
-        description: '生成包含背景、目标、方案、计划与风险的提案。',
-        prompt: '请为以下主题生成一份可直接落地的提案文档，结构包含：背景/问题、目标、方案设计、实施计划（里程碑）、资源与预算（如无法确定则给估算区间）、风险与对策、结论。\n要求逻辑严谨、条理清晰。',
+        title: '项目提案',
+        description: '快速生成可落地的方案/计划/风险。',
+        seed: '想做一个面向海外用户的文档排版工具站：输入短内容自动变成 Word；支持模板、图片理解、导出 .docx。',
+        preset: '请把用户输入扩写成项目提案，结构：背景/问题、目标、方案设计、实施计划（里程碑）、资源与预算（估算即可）、风险与对策、结论与下一步。',
         diagramMode: 'flowchart',
       },
       {
-        title: '把要点扩写成文章',
-        description: '把 bullet points 扩写为有段落结构的文章。',
-        prompt: '请将我提供的要点扩写成一篇结构清晰的文章：\n- 先给一个居中主标题\n- 正文分成 4-6 个小节\n- 每节先总结后展开，避免废话\n- 结尾给简短总结',
+        title: '一页简报',
+        description: '快速输出可分享的一页式 Brief。',
+        seed: '主题：为 Shopify 商家做一个 AI 客服助手\n受众：产品/业务团队\n重点：价值、范围、指标、里程碑',
+        preset: '请把用户输入扩写成一页简报，结构：Overview、Context、Key points、Recommendations、Next steps。要求简洁、有可执行的下一步。',
         diagramMode: 'none',
       },
     ]
     : [
       {
-        title: 'Polish & format my text',
-        description: 'Turn rough content into a clean, Word-ready document.',
-        prompt: 'Please rewrite and format the provided content into a professional, well-structured document:\n- Use clear headings (##/###) and bullet lists\n- Improve clarity and flow without changing meaning\n- Bold key points where helpful\n- Output Markdown directly (do not wrap the entire answer in code fences)',
-        diagramMode: 'none',
+        title: 'Polish into a report',
+        description: 'Short notes → a structured report with headings and summary.',
+        seed: 'Topic: The evolution of smartphones\nNotes:\n- Early era: brick phones, IBM Simon, Palm/BlackBerry\n- Big shifts: iOS/Android, chips, screens, cameras\n- Today: payments, social, AI assistants, IoT\n- What’s next: foldables, satellite connectivity, privacy regulation, sustainability',
+        preset: 'Expand the user input into a report with: Overview, Timeline (stages), Key milestones, Today’s use cases, Future trends & challenges, Summary. Keep it professional and Word-ready.',
+        diagramMode: 'mindmap',
       },
       {
-        title: 'Meeting notes → action items',
-        description: 'Extract decisions and next steps in a clear structure.',
-        prompt: 'Please transform the provided meeting notes into:\n1) Executive summary\n2) Key decisions\n3) Action items (owner / due date if available)\n4) Open questions & risks\nKeep it concise and easy to scan.',
+        title: 'Meeting notes',
+        description: 'Turn rough notes into decisions and action items.',
+        seed: 'Meeting: Product requirements review\nNotes:\n- Goal: ship MVP in May\n- Decision: start with auth + paywall\n- Risks: model cost, compliance\n- Next: UI review, analytics plan',
+        preset: 'Convert the user input into: Executive summary, Key decisions, Action items (owner / due date if available), Open questions & risks.',
         diagramMode: 'none',
       },
       {
         title: 'Project proposal',
-        description: 'Generate a proposal with goals, plan, and risks.',
-        prompt: 'Write a practical project proposal with the following structure: Background, Goals, Proposed Solution, Implementation Plan (milestones), Resources & Budget (estimate if needed), Risks & Mitigations, Conclusion.\nMake it Word-ready with headings and lists.',
+        description: 'A practical proposal with plan and risks.',
+        seed: 'Idea: A global document formatting tool. Users paste short notes and export polished Word docs. Include templates, optional images, and .docx export.',
+        preset: 'Write a project proposal with: Background, Goals, Proposed solution, Implementation plan (milestones), Resources & budget (estimates), Risks & mitigations, Conclusion & next steps.',
         diagramMode: 'flowchart',
       },
       {
-        title: 'Create a one-page brief',
-        description: 'A structured brief you can share instantly.',
-        prompt: 'Create a one-page brief on the topic with: Overview, Context, Key points, Recommendations, Next steps.\nKeep the language crisp and professional.',
+        title: 'One-page brief',
+        description: 'A concise brief you can share instantly.',
+        seed: 'Topic: AI customer support assistant for Shopify stores\nAudience: product & business team\nFocus: value, scope, metrics, milestones',
+        preset: 'Create a one-page brief with: Overview, Context, Key points, Recommendations, Next steps. Keep it crisp and actionable.',
         diagramMode: 'none',
       },
     ];
 
-  const applyTemplate = (template: { prompt: string; diagramMode?: string }) => {
-    setPrompt(template.prompt);
+  const applyTemplate = (template: { seed: string; preset: string; diagramMode?: string }) => {
+    setPrompt(template.seed);
+    setTemplatePreset(template.preset);
     if (template.diagramMode) {
       setDiagramMode(template.diagramMode);
     }
@@ -809,8 +823,13 @@ export default function Home() {
       return;
     }
 
+    const activePreset = templatePreset || defaultPreset;
+    const promptToSend = locale === 'zh'
+      ? `${activePreset}\n\n【用户输入】：\n${prompt.trim()}`
+      : `${activePreset}\n\nUser input:\n${prompt.trim()}`;
+
     const payload = {
-      prompt,
+      prompt: promptToSend,
       content,
       model,
       locale,
@@ -1175,7 +1194,7 @@ export default function Home() {
   });
 
   return (
-    <div className="h-screen bg-gray-50/50 flex flex-col overflow-hidden">
+    <div className="min-h-screen bg-gray-50/50 flex flex-col">
       {/* Header */}
       <header className="bg-white border-b border-gray-200 shrink-0 z-10">
         <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
@@ -1214,8 +1233,8 @@ export default function Home() {
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 min-h-0 overflow-y-auto lg:overflow-hidden">
-        <div className="max-w-7xl mx-auto px-4 pt-6">
+      <main className="flex-1">
+        <div className="max-w-[1600px] mx-auto px-4 pt-6">
           <div className="bg-white border border-gray-200 rounded-2xl p-6 md:p-8 shadow-sm">
             <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
               <div className="max-w-2xl">
@@ -1230,10 +1249,10 @@ export default function Home() {
             </div>
           </div>
         </div>
-        <div className="max-w-[1600px] mx-auto px-4 py-6 h-full flex flex-col lg:flex-row gap-6">
+        <div className="max-w-[1600px] mx-auto px-4 py-6 flex flex-col lg:flex-row gap-6">
           
           {/* Left Column: Advanced Settings */}
-          <div className="w-full lg:w-[25%] lg:h-full lg:overflow-y-auto lg:pr-2 pb-6 space-y-6 custom-scrollbar">
+          <div className="w-full lg:w-[25%] lg:pr-2 pb-6 space-y-6">
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
               <h2 className="text-lg font-semibold text-gray-800 mb-6 flex items-center gap-2">
                 <SlidersHorizontal className="w-5 h-5 text-indigo-500" />
@@ -1389,7 +1408,7 @@ export default function Home() {
           </div>
 
           {/* Middle Column: Inputs */}
-          <div className="w-full lg:w-[45%] lg:h-full lg:overflow-y-auto lg:pr-2 pb-6 space-y-6 custom-scrollbar">
+          <div className="w-full lg:w-[45%] lg:pr-2 pb-6 space-y-6">
             {/* Settings Card */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <div className="flex items-center gap-2 mb-4 text-gray-800">
@@ -1573,7 +1592,7 @@ export default function Home() {
         </div>
 
           {/* Right Column: Actions & Status */}
-          <div className="w-full lg:w-[40%] lg:h-full lg:overflow-y-auto lg:pr-2 pb-6 flex flex-col custom-scrollbar">
+          <div className="w-full lg:w-[40%] lg:pr-2 pb-6 flex flex-col">
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 flex flex-col min-h-max">
               <h2 className="text-lg font-semibold text-gray-800 mb-4 shrink-0">{locale === 'zh' ? '操作面板' : 'Actions'}</h2>
               
