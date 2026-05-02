@@ -1300,7 +1300,7 @@ export default function Home() {
           <motion.div
             {...(reduceMotion
               ? {}
-              : { initial: { opacity: 0, y: 10 }, animate: { opacity: 1, y: 0 }, transition: { duration: 0.5, ease: [0.22, 1, 0.36, 1] } })}
+              : { initial: false, animate: { opacity: 1, y: 0 }, transition: { duration: 0.5, ease: [0.22, 1, 0.36, 1] } })}
             className="bg-gradient-to-b from-white to-indigo-50/30 border border-gray-200/70 rounded-2xl p-6 md:p-8 shadow-[0_10px_30px_rgba(15,23,42,0.06)] relative"
           >
             <div className="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
@@ -1323,7 +1323,7 @@ export default function Home() {
             <motion.div
               {...(reduceMotion
                 ? {}
-                : { initial: { opacity: 0, y: 10 }, animate: { opacity: 1, y: 0 }, transition: { duration: 0.45, delay: 0.05, ease: [0.22, 1, 0.36, 1] } })}
+                : { initial: false, animate: { opacity: 1, y: 0 }, transition: { duration: 0.45, delay: 0.05, ease: [0.22, 1, 0.36, 1] } })}
               className="bg-white/80 backdrop-blur rounded-xl shadow-[0_10px_30px_rgba(15,23,42,0.05)] border border-gray-200/70 p-6"
             >
               <h2 className="text-lg font-semibold text-gray-800 mb-6 flex items-center gap-2">
@@ -1433,7 +1433,7 @@ export default function Home() {
             <motion.div
               {...(reduceMotion
                 ? {}
-                : { initial: { opacity: 0, y: 10 }, animate: { opacity: 1, y: 0 }, transition: { duration: 0.45, delay: 0.1, ease: [0.22, 1, 0.36, 1] } })}
+                : { initial: false, animate: { opacity: 1, y: 0 }, transition: { duration: 0.45, delay: 0.1, ease: [0.22, 1, 0.36, 1] } })}
               className="mt-6 bg-white/80 backdrop-blur rounded-xl shadow-[0_10px_30px_rgba(15,23,42,0.05)] border border-gray-200/70 p-6"
             >
               <h2 className="text-lg font-semibold text-gray-800 mb-6 flex items-center gap-2">
@@ -1490,7 +1490,7 @@ export default function Home() {
           <motion.div
             {...(reduceMotion
               ? {}
-              : { initial: { opacity: 0, y: 10 }, animate: { opacity: 1, y: 0 }, transition: { duration: 0.45, delay: 0.1, ease: [0.22, 1, 0.36, 1] } })}
+              : { initial: false, animate: { opacity: 1, y: 0 }, transition: { duration: 0.45, delay: 0.1, ease: [0.22, 1, 0.36, 1] } })}
             className="bg-white/80 backdrop-blur rounded-xl shadow-[0_10px_30px_rgba(15,23,42,0.05)] border border-gray-200/70 p-6"
           >
             <div className="flex items-center gap-2 mb-4 text-gray-800">
@@ -1560,7 +1560,7 @@ export default function Home() {
           <motion.div
             {...(reduceMotion
               ? {}
-              : { initial: { opacity: 0, y: 10 }, animate: { opacity: 1, y: 0 }, transition: { duration: 0.45, delay: 0.15, ease: [0.22, 1, 0.36, 1] } })}
+              : { initial: false, animate: { opacity: 1, y: 0 }, transition: { duration: 0.45, delay: 0.15, ease: [0.22, 1, 0.36, 1] } })}
             className="bg-white/80 backdrop-blur rounded-xl shadow-[0_10px_30px_rgba(15,23,42,0.05)] border border-gray-200/70 overflow-hidden"
           >
             <div 
@@ -1625,7 +1625,7 @@ export default function Home() {
             <motion.div
               {...(reduceMotion
                 ? {}
-                : { initial: { opacity: 0, y: 10 }, animate: { opacity: 1, y: 0 }, transition: { duration: 0.45, delay: 0.18, ease: [0.22, 1, 0.36, 1] } })}
+                : { initial: false, animate: { opacity: 1, y: 0 }, transition: { duration: 0.45, delay: 0.18, ease: [0.22, 1, 0.36, 1] } })}
               className="bg-white/80 backdrop-blur rounded-xl shadow-[0_10px_30px_rgba(15,23,42,0.05)] border border-gray-200/70 p-6"
             >
               <div className="flex flex-col mb-4 gap-2">
@@ -1689,7 +1689,7 @@ export default function Home() {
             <motion.div
               {...(reduceMotion
                 ? {}
-                : { initial: { opacity: 0, y: 10 }, animate: { opacity: 1, y: 0 }, transition: { duration: 0.45, delay: 0.2, ease: [0.22, 1, 0.36, 1] } })}
+                : { initial: false, animate: { opacity: 1, y: 0 }, transition: { duration: 0.45, delay: 0.2, ease: [0.22, 1, 0.36, 1] } })}
               className="bg-white/80 backdrop-blur rounded-xl shadow-[0_10px_30px_rgba(15,23,42,0.05)] border border-gray-200/70 p-6 flex flex-col min-h-max"
             >
               <h2 className="text-lg font-semibold text-gray-800 mb-4 shrink-0">{locale === 'zh' ? '操作面板' : 'Actions'}</h2>
