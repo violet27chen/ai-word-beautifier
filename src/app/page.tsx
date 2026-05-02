@@ -1728,18 +1728,20 @@ export default function Home() {
                     <p className="text-sm">{text('generateSuccess')}</p>
                   </div>
                 )}
-
-                <div className="pt-6 border-t border-gray-100 pb-4">
-                  <h3 className="text-sm font-medium text-gray-900 mb-2">{locale === 'zh' ? '使用说明与免责声明' : 'Usage & Disclaimer'}</h3>
-                  <ul className="text-sm text-gray-600 space-y-2 list-disc list-inside pl-1 mb-4">
-                    <li><strong>{locale === 'zh' ? '直接生成：' : 'Generate:'}</strong> {locale === 'zh' ? '输入要求并点击生成，即可获得结构清晰、可下载的 Word 文档。' : 'Enter instructions and click Generate to get a well-structured draft and a downloadable .docx.'}</li>
-                    <li><strong>{locale === 'zh' ? '排版美化：' : 'Beautify:'}</strong> {locale === 'zh' ? '粘贴已有内容或上传 .docx，并在要求中说明目标风格与结构。' : 'Paste existing content or upload a .docx, then describe the desired style and structure.'}</li>
-                    <li>{locale === 'zh' ? '生成速度取决于内容长度与所选模型，请耐心等待。' : 'Generation speed depends on content length and the selected model. Please wait.'}</li>
-                    <li>{locale === 'zh' ? '请勿上传敏感信息（身份证、银行卡、账号密码、商业机密等）。' : 'Do not upload sensitive information (IDs, bank details, passwords, trade secrets, etc.).'}</li>
-                  </ul>
-                </div>
               </div>
             </div>
+          </div>
+        </div>
+
+        <div className="max-w-[1600px] mx-auto px-4 pb-10">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <h3 className="text-sm font-medium text-gray-900 mb-2">{locale === 'zh' ? '使用说明与免责声明' : 'Usage & Disclaimer'}</h3>
+            <ul className="text-sm text-gray-600 space-y-2 list-disc list-inside pl-1">
+              <li><strong>{locale === 'zh' ? '直接生成：' : 'Generate:'}</strong> {locale === 'zh' ? '输入内容并点击生成，即可获得结构清晰、可下载的 Word 文档。' : 'Paste content and click Generate to get a well-structured draft and a downloadable .docx.'}</li>
+              <li><strong>{locale === 'zh' ? '排版美化：' : 'Beautify:'}</strong> {locale === 'zh' ? '粘贴已有内容或上传 .docx，我们会自动重排结构与表达。' : 'Paste existing content or upload a .docx — we will rewrite and format it automatically.'}</li>
+              <li>{locale === 'zh' ? '生成速度取决于内容长度与所选模型，请耐心等待。' : 'Generation speed depends on content length and the selected model. Please wait.'}</li>
+              <li>{locale === 'zh' ? '请勿上传敏感信息（身份证、银行卡、账号密码、商业机密等）。' : 'Do not upload sensitive information (IDs, bank details, passwords, trade secrets, etc.).'}</li>
+            </ul>
           </div>
         </div>
       </main>
