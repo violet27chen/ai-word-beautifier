@@ -249,9 +249,16 @@ export default function Home() {
 
   const text = (key: string) => {
     const en: Record<string, string> = {
-      appTitle: 'AI Document Formatter',
+      appTitle: 'DocPolish',
       navFormatter: 'Formatter',
       badgeBeta: 'Free during beta',
+      heroTitle: 'Turn messy drafts into polished Word docs',
+      heroSubtitle: 'Generate, rewrite, and format in seconds. Export to .docx with clean structure, headings, lists, and optional diagrams.',
+      trustNoSignup: 'No sign-up',
+      trustDocx: 'Export .docx',
+      trustPrivacy: 'Privacy-first',
+      templatesTitle: 'Quick templates',
+      templatesHint: 'Pick a template to start with an optimized instruction prompt.',
       generationSettings: 'Generation Settings',
       chooseModel: 'Model',
       modelHintVisionOnly: 'Images uploaded: only multimodal models are available in the dropdown.',
@@ -307,13 +314,20 @@ export default function Home() {
       errorQuota: 'Service quota exceeded. Please try again later.',
       privacyTitle: 'Privacy Policy',
       agreementTitle: 'Terms of Service',
-      footerBrand: 'AI Document Formatter',
+      footerBrand: 'DocPolish',
     };
 
     const zh: Record<string, string> = {
-      appTitle: 'AI Word 排版美化助手',
+      appTitle: 'DocPolish',
       navFormatter: '排版美化',
       badgeBeta: '全站免费体验中',
+      heroTitle: '把杂乱内容变成排版专业的 Word 文档',
+      heroSubtitle: '快速生成、改写与排版，一键导出 .docx；支持图片理解与 Mermaid 图示。',
+      trustNoSignup: '无需登录',
+      trustDocx: '导出 .docx',
+      trustPrivacy: '隐私优先',
+      templatesTitle: '快捷模板',
+      templatesHint: '点击模板会自动填充更适合的指令，便于快速开始。',
       generationSettings: '生成设置',
       chooseModel: '选择模型',
       modelHintVisionOnly: '已上传图片：下拉框仅显示支持图片理解的多模态模型。',
@@ -369,7 +383,7 @@ export default function Home() {
       errorQuota: '服务额度不足，请稍后再试。',
       privacyTitle: '隐私政策',
       agreementTitle: '用户协议',
-      footerBrand: 'AI Word 排版美化助手',
+      footerBrand: 'DocPolish',
     };
 
     const dict = locale === 'zh' ? zh : en;
@@ -414,6 +428,67 @@ export default function Home() {
       { value: 'mindmap', label: 'Mind map' },
       { value: 'flowchart', label: 'Flowchart' },
     ];
+
+  const templates = locale === 'zh'
+    ? [
+      {
+        title: '把内容排版成报告',
+        description: '自动加标题、分段、列表与重点加粗，输出可下载 Word。',
+        prompt: '请将我提供的内容重新排版为一份结构清晰、格式专业的报告：\n- 使用分层标题（##/###）与列表\n- 段落之间逻辑顺畅，适度加粗重点\n- 输出可直接导出为 Word 的 Markdown（不要使用 ```markdown 或 ```html 代码块）',
+        diagramMode: 'none',
+      },
+      {
+        title: '会议纪要 → 行动项',
+        description: '把原始纪要整理为摘要、决策与 Action Items。',
+        prompt: '请将我提供的会议纪要整理成可执行的版本：\n1) 会议摘要\n2) 关键决策\n3) 行动项（负责人/截止时间若未提供则留空）\n4) 风险与待确认问题\n要求结构清晰、要点列表化。',
+        diagramMode: 'none',
+      },
+      {
+        title: '方案/提案文档',
+        description: '生成包含背景、目标、方案、计划与风险的提案。',
+        prompt: '请为以下主题生成一份可直接落地的提案文档，结构包含：背景/问题、目标、方案设计、实施计划（里程碑）、资源与预算（如无法确定则给估算区间）、风险与对策、结论。\n要求逻辑严谨、条理清晰。',
+        diagramMode: 'flowchart',
+      },
+      {
+        title: '把要点扩写成文章',
+        description: '把 bullet points 扩写为有段落结构的文章。',
+        prompt: '请将我提供的要点扩写成一篇结构清晰的文章：\n- 先给一个居中主标题\n- 正文分成 4-6 个小节\n- 每节先总结后展开，避免废话\n- 结尾给简短总结',
+        diagramMode: 'none',
+      },
+    ]
+    : [
+      {
+        title: 'Polish & format my text',
+        description: 'Turn rough content into a clean, Word-ready document.',
+        prompt: 'Please rewrite and format the provided content into a professional, well-structured document:\n- Use clear headings (##/###) and bullet lists\n- Improve clarity and flow without changing meaning\n- Bold key points where helpful\n- Output Markdown directly (do not wrap the entire answer in code fences)',
+        diagramMode: 'none',
+      },
+      {
+        title: 'Meeting notes → action items',
+        description: 'Extract decisions and next steps in a clear structure.',
+        prompt: 'Please transform the provided meeting notes into:\n1) Executive summary\n2) Key decisions\n3) Action items (owner / due date if available)\n4) Open questions & risks\nKeep it concise and easy to scan.',
+        diagramMode: 'none',
+      },
+      {
+        title: 'Project proposal',
+        description: 'Generate a proposal with goals, plan, and risks.',
+        prompt: 'Write a practical project proposal with the following structure: Background, Goals, Proposed Solution, Implementation Plan (milestones), Resources & Budget (estimate if needed), Risks & Mitigations, Conclusion.\nMake it Word-ready with headings and lists.',
+        diagramMode: 'flowchart',
+      },
+      {
+        title: 'Create a one-page brief',
+        description: 'A structured brief you can share instantly.',
+        prompt: 'Create a one-page brief on the topic with: Overview, Context, Key points, Recommendations, Next steps.\nKeep the language crisp and professional.',
+        diagramMode: 'none',
+      },
+    ];
+
+  const applyTemplate = (template: { prompt: string; diagramMode?: string }) => {
+    setPrompt(template.prompt);
+    if (template.diagramMode) {
+      setDiagramMode(template.diagramMode);
+    }
+  };
 
   const cleanMarkdown = displayedMarkdown
     .replace(/^```(markdown|html)?\n?/i, '')
@@ -1140,6 +1215,21 @@ export default function Home() {
 
       {/* Main Content */}
       <main className="flex-1 min-h-0 overflow-y-auto lg:overflow-hidden">
+        <div className="max-w-7xl mx-auto px-4 pt-6">
+          <div className="bg-white border border-gray-200 rounded-2xl p-6 md:p-8 shadow-sm">
+            <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+              <div className="max-w-2xl">
+                <h2 className="text-2xl md:text-3xl font-semibold text-gray-900 tracking-tight">{text('heroTitle')}</h2>
+                <p className="mt-2 text-sm md:text-base text-gray-600">{text('heroSubtitle')}</p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <span className="inline-flex items-center rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700">{text('trustNoSignup')}</span>
+                <span className="inline-flex items-center rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700">{text('trustDocx')}</span>
+                <span className="inline-flex items-center rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700">{text('trustPrivacy')}</span>
+              </div>
+            </div>
+          </div>
+        </div>
         <div className="max-w-[1600px] mx-auto px-4 py-6 h-full flex flex-col lg:flex-row gap-6">
           
           {/* Left Column: Advanced Settings */}
@@ -1327,6 +1417,27 @@ export default function Home() {
                     {text('modelHintVisionOnly')}
                   </p>
                 )}
+              </div>
+              <div className="rounded-xl border border-gray-200 bg-gray-50/60 p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <div className="text-sm font-semibold text-gray-900">{text('templatesTitle')}</div>
+                    <div className="mt-0.5 text-xs text-gray-600">{text('templatesHint')}</div>
+                  </div>
+                </div>
+                <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {templates.map((t) => (
+                    <button
+                      key={t.title}
+                      type="button"
+                      onClick={() => applyTemplate(t)}
+                      className="text-left rounded-lg border border-gray-200 bg-white px-3 py-2 hover:border-indigo-300 hover:bg-indigo-50/40 transition-colors"
+                    >
+                      <div className="text-sm font-medium text-gray-900">{t.title}</div>
+                      <div className="mt-0.5 text-xs text-gray-600">{t.description}</div>
+                    </button>
+                  ))}
+                </div>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">

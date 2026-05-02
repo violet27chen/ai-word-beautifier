@@ -5,8 +5,8 @@ import ChunkErrorAutoReload from './chunk-error-auto-reload';
 export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
-  title: 'AI Document Formatter',
-  description: 'Generate and format professional Word documents. Export to .docx in one click.',
+  title: 'DocPolish',
+  description: 'Turn messy drafts into polished Word docs. Generate, rewrite, and export to .docx.',
   icons: {
     icon: '/file.svg',
   },
