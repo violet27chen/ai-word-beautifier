@@ -1252,8 +1252,8 @@ export default function Home() {
   }), [uploadedImages, locale]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-white via-gray-50 to-white flex flex-col relative">
-      <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-b from-white via-gray-50 to-white flex flex-col relative isolate">
+      <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden -z-10">
         <div className="absolute -top-32 -left-32 h-[520px] w-[520px] rounded-full bg-gradient-to-br from-indigo-300/30 via-violet-300/20 to-transparent blur-3xl" />
         <div className="absolute -top-40 -right-40 h-[560px] w-[560px] rounded-full bg-gradient-to-br from-sky-300/25 via-indigo-300/20 to-transparent blur-3xl" />
       </div>
