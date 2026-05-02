@@ -10,6 +10,18 @@ function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+type Locale = 'en' | 'zh';
+
+const LOCALE_STORAGE_KEY = '__app_locale__';
+
+function resolveInitialLocale(): Locale {
+  if (typeof window === 'undefined') return 'en';
+  const saved = window.localStorage.getItem(LOCALE_STORAGE_KEY);
+  if (saved === 'en' || saved === 'zh') return saved;
+  const browserLang = (navigator.language || '').toLowerCase();
+  return browserLang.startsWith('zh') ? 'zh' : 'en';
+}
+
 type ModelOption = {
   value: string;
   label: string;
@@ -102,6 +114,7 @@ function loadMermaid(): Promise<MermaidRenderer> {
 }
 
 function MermaidDiagram({ code }: { code: string }) {
+  const [locale] = useState<Locale>(() => resolveInitialLocale());
   const [svg, setSvg] = useState('');
   const [renderError, setRenderError] = useState('');
   const chartCode = code.trim();
@@ -127,14 +140,14 @@ function MermaidDiagram({ code }: { code: string }) {
       } catch {
         if (!active) return;
         setSvg('');
-        setRenderError('图示渲染失败，请检查 Mermaid 语法后重试。');
+        setRenderError(locale === 'zh' ? '图示渲染失败，请检查 Mermaid 语法后重试。' : 'Failed to render the diagram. Please check the Mermaid syntax and try again.');
       }
     };
     renderMermaid();
     return () => {
       active = false;
     };
-  }, [chartCode]);
+  }, [chartCode, locale]);
 
   if (!chartCode) {
     return null;
@@ -144,7 +157,7 @@ function MermaidDiagram({ code }: { code: string }) {
     return <div className="my-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">{renderError}</div>;
   }
   if (!svg) {
-    return <div className="my-3 rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-500">图示渲染中...</div>;
+    return <div className="my-3 rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-500">{locale === 'zh' ? '图示渲染中...' : 'Rendering diagram...'}</div>;
   }
   return <div className="mermaid-diagram my-3 overflow-x-auto rounded-md border border-gray-200 bg-white p-2" dangerouslySetInnerHTML={{ __html: svg }} />;
 }
@@ -157,6 +170,7 @@ function getMammoth() {
 }
 
 export default function Home() {
+  const [locale, setLocale] = useState<Locale>(() => resolveInitialLocale());
   const [prompt, setPrompt] = useState('');
   const [content, setContent] = useState('');
   const [model, setModel] = useState(() => {
@@ -221,6 +235,178 @@ export default function Home() {
   const [documentDate, setDocumentDate] = useState('');
   const [refinePrompt, setRefinePrompt] = useState('');
   const [diagramMode, setDiagramMode] = useState('none');
+
+  useEffect(() => {
+    window.localStorage.setItem(LOCALE_STORAGE_KEY, locale);
+  }, [locale]);
+
+  const text = (key: string) => {
+    const en: Record<string, string> = {
+      appTitle: 'AI Document Formatter',
+      navFormatter: 'Formatter',
+      badgeBeta: 'Free during beta',
+      generationSettings: 'Generation Settings',
+      chooseModel: 'Model',
+      modelHintVisionOnly: 'Images uploaded: only multimodal models are available in the dropdown.',
+      promptLabel: 'Instructions',
+      promptPlaceholder: 'Example: Write a project proposal. Keep it professional and well-structured with headings, lists, and a conclusion.',
+      contentCardTitle: 'Source Content (Optional)',
+      contentFilled: 'Added',
+      contentHint: 'Paste text or upload a .docx to beautify an existing document.',
+      advancedTitle: 'Advanced Settings',
+      wordCountLabel: 'Target word count (Optional)',
+      writingStyleLabel: 'Writing style (Optional)',
+      eduLevelLabel: 'Audience level (Optional)',
+      perfLevelLabel: 'Writing level',
+      addTyposLabel: 'Add random typos',
+      addTyposHint: 'Adds 1-5 random typos to mimic human writing.',
+      humanTraceLabel: 'Human-like thinking traces',
+      humanTraceHint: 'Adds natural self-corrections and comparisons for a more human tone.',
+      evidenceLabel: 'Evidence support',
+      evidenceHint: 'Adds verifiable references (URLs, papers, articles) where appropriate.',
+      diagramLabel: 'Diagrams',
+      diagramHint: 'Optionally insert a Mermaid diagram block to clarify structure and flow.',
+      signatureTitle: 'Signature & Date',
+      signatureToggle: 'Enable signature & date',
+      authorLabel: 'Author (Optional)',
+      authorPlaceholder: "Leave empty to use 'XXX'",
+      dateLabel: 'Date (Optional)',
+      datePlaceholder: 'Leave empty to use today',
+      signatureOffHint: 'Disabled: the generated content will not include signature or date.',
+      generateButton: 'Generate',
+      refineButton: 'Refine',
+      refinePlaceholder: 'Describe what to modify based on the current content.',
+      downloadButton: 'Download .docx',
+      generatingDefault: 'Generating...',
+      analyzingText: 'Analyzing...',
+      analyzingImages: 'Analyzing images...',
+      generatingText: 'Generating...',
+      refineAnalyzing: 'Reviewing current content...',
+      refineGenerating: 'Refining...',
+      generateSuccess: 'Success. Your Word document download has started.',
+      agreement: 'Terms',
+      privacy: 'Privacy',
+      agreementBrackets: 'Terms',
+      privacyBrackets: 'Privacy Policy',
+      errorNeedPrompt: 'Please enter instructions.',
+      errorUploadDocxOnly: 'Only .docx files are supported.',
+      errorReadDocx: 'Failed to read document: ',
+      errorDownload: 'Download failed.',
+      errorUnknown: 'Something went wrong.',
+      errorNetwork: 'Network error. Please check your connection and try again.',
+      errorTimeout: 'The request timed out. Please simplify the prompt and try again.',
+      errorAuth: 'API key is invalid or missing. Please contact the site administrator.',
+      errorRateLimit: 'Too many requests. Please try again later.',
+      errorQuota: 'Service quota exceeded. Please try again later.',
+      privacyTitle: 'Privacy Policy',
+      agreementTitle: 'Terms of Service',
+      footerBrand: 'AI Document Formatter',
+    };
+
+    const zh: Record<string, string> = {
+      appTitle: 'AI Word 排版美化助手',
+      navFormatter: '排版美化',
+      badgeBeta: '全站免费体验中',
+      generationSettings: '生成设置',
+      chooseModel: '选择模型',
+      modelHintVisionOnly: '已上传图片：下拉框仅显示支持图片理解的多模态模型。',
+      promptLabel: '排版/生成要求',
+      promptPlaceholder: '例如：请帮我写一份关于 AI 技术在医疗领域应用的商业计划书，要求排版专业，包含标题、正文、列表和总结...',
+      contentCardTitle: '原始内容 (可选)',
+      contentFilled: '已填写',
+      contentHint: '如需美化已有文档，请展开粘贴文本或上传',
+      advancedTitle: '高级参数设置',
+      wordCountLabel: '指定字数 (可选)',
+      writingStyleLabel: '文笔风格 (可选)',
+      eduLevelLabel: '写作水平角色 (可选)',
+      perfLevelLabel: '水平等级',
+      addTyposLabel: '添加随机错别字',
+      addTyposHint: '开启后文章中将随机出现1-5个错别字',
+      humanTraceLabel: '真人思考痕迹',
+      humanTraceHint: '开启后会增加自然推敲、对比与自我修正语气，模拟真人写作过程',
+      evidenceLabel: '数据与案例支撑',
+      evidenceHint: '开启后会在合适段落插入可核验的来源引用（网址、论文或文章）',
+      diagramLabel: '自动图示插入',
+      diagramHint: '可选在正文关键位置自动插入 Mermaid 图示代码块，便于梳理结构和流程。',
+      signatureTitle: '署名与日期',
+      signatureToggle: '启用署名与日期',
+      authorLabel: '文档署名 / 报告者 (可选)',
+      authorPlaceholder: "不填写则用 'XXX' 代替",
+      dateLabel: '落款日期 (可选)',
+      datePlaceholder: '不填则自动获取今日日期',
+      signatureOffHint: '已关闭：生成内容中将不包含署名与落款日期，涉及时间时仅允许基于已提供资料。',
+      generateButton: '生成',
+      refineButton: '润色',
+      refinePlaceholder: '输入后期优化/修改要求...',
+      downloadButton: '下载 Word',
+      generatingDefault: '正在生成内容...',
+      analyzingText: '正在分析需求...',
+      analyzingImages: '正在分析图片...',
+      generatingText: '正在生成内容...',
+      refineAnalyzing: '正在阅读当前内容并构思优化方案...',
+      refineGenerating: '正在润色生成中...',
+      generateSuccess: '生成成功！Word文档已开始下载。',
+      agreement: '用户协议',
+      privacy: '隐私政策',
+      agreementBrackets: '《用户协议》',
+      privacyBrackets: '《隐私政策》',
+      errorNeedPrompt: '请输入排版或生成要求',
+      errorUploadDocxOnly: '仅支持 .docx 格式的 Word 文档',
+      errorReadDocx: '读取文档失败：',
+      errorDownload: '下载失败',
+      errorUnknown: '发生未知错误',
+      errorNetwork: '网络连接异常，请检查您的网络设置后重试。',
+      errorTimeout: '响应超时，请尝试精简要求或稍后再试。',
+      errorAuth: 'API 密钥无效或未配置，请联系运营者检查后台 API 密钥。',
+      errorRateLimit: '当前访问人数过多，请稍后重试。',
+      errorQuota: '服务额度不足，请稍后再试。',
+      privacyTitle: '隐私政策',
+      agreementTitle: '用户协议',
+      footerBrand: 'AI Word 排版美化助手',
+    };
+
+    const dict = locale === 'zh' ? zh : en;
+    return dict[key] || key;
+  };
+
+  const writingStyleOptions = locale === 'zh'
+    ? WRITING_STYLES
+    : [
+      { value: '', label: 'Default' },
+      { value: 'Formal', label: 'Formal' },
+      { value: 'Academic', label: 'Academic' },
+      { value: 'Plain', label: 'Plain' },
+      { value: 'Narrative', label: 'Narrative' },
+      { value: 'Humorous', label: 'Humorous' },
+      { value: 'Natural', label: 'Natural' },
+    ];
+
+  const eduLevelOptions = locale === 'zh'
+    ? EDU_LEVELS
+    : [
+      { value: '', label: 'Any' },
+      { value: 'Graduate', label: 'Graduate' },
+      { value: 'College', label: 'College' },
+      { value: 'High school', label: 'High school' },
+      { value: 'Middle school', label: 'Middle school' },
+      { value: 'Elementary', label: 'Elementary' },
+    ];
+
+  const perfLevelOptions = locale === 'zh'
+    ? PERF_LEVELS
+    : [
+      { value: 'Excellent', label: 'Excellent' },
+      { value: 'Average', label: 'Average' },
+      { value: 'Poor', label: 'Poor' },
+    ];
+
+  const diagramModeOptions = locale === 'zh'
+    ? DIAGRAM_MODES
+    : [
+      { value: 'none', label: 'None' },
+      { value: 'mindmap', label: 'Mind map' },
+      { value: 'flowchart', label: 'Flowchart' },
+    ];
 
   const cleanMarkdown = displayedMarkdown
     .replace(/^```(markdown|html)?\n?/i, '')
@@ -421,7 +607,7 @@ export default function Home() {
           { id: `img_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`, base64, file }
         ]);
       } catch {
-        setError(`图片处理失败：${file.name}`);
+        setError(locale === 'zh' ? `图片处理失败：${file.name}` : `Failed to process image: ${file.name}`);
       }
     }
 
@@ -439,7 +625,7 @@ export default function Home() {
     if (!file) return;
     
     if (!file.name.endsWith('.docx')) {
-      setError('仅支持 .docx 格式的 Word 文档');
+      setError(text('errorUploadDocxOnly'));
       return;
     }
 
@@ -455,7 +641,7 @@ export default function Home() {
       }
     } catch (err) {
       const e = err as Error;
-      setError('读取文档失败：' + e.message);
+      setError(text('errorReadDocx') + e.message);
     } finally {
       setIsUploading(false);
       if (fileInputRef.current) {
@@ -484,7 +670,7 @@ export default function Home() {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || '生成失败，请检查网络或重试');
+        throw new Error(errorData.error || (locale === 'zh' ? '生成失败，请检查网络或重试' : 'Request failed. Please try again.'));
       }
 
       if (!response.body) throw new Error('ReadableStream not supported');
@@ -511,19 +697,21 @@ export default function Home() {
       const e = err as Error;
       
       // Friendly error messages mapping
-      let errorMsg = e.message || '发生未知错误';
+      let errorMsg = e.message || text('errorUnknown');
       if (errorMsg.includes('Failed to fetch') || errorMsg.includes('NetworkError')) {
-        errorMsg = '网络连接异常，请检查您的网络设置（若使用移动网络，请尝试切换至 WiFi 或关闭代理）。';
+        errorMsg = text('errorNetwork');
       } else if (errorMsg.includes('timeout') || errorMsg.includes('Timeout')) {
-        errorMsg = 'AI 思考时间过长，响应超时，请尝试精简要求或稍后再试。';
+        errorMsg = text('errorTimeout');
       } else if (errorMsg.includes('ReadableStream not supported')) {
-        errorMsg = '您的浏览器版本过低，不支持流式生成，请升级浏览器。';
+        errorMsg = locale === 'zh'
+          ? '您的浏览器版本过低，不支持流式生成，请升级浏览器。'
+          : 'Your browser does not support streaming responses. Please upgrade your browser.';
       } else if (errorMsg.includes('balance') || errorMsg.includes('insufficient_quota') || errorMsg.includes('arrears') || errorMsg.includes('1004')) {
-        errorMsg = '个人运营者的上游模型余额不足，请稍后再试或联系运营者。';
+        errorMsg = text('errorQuota');
       } else if (errorMsg.includes('rate_limit') || errorMsg.includes('429') || errorMsg.includes('Too Many Requests')) {
-        errorMsg = '当前访问人数过多，请求速率已达上限，请稍后重试。';
+        errorMsg = text('errorRateLimit');
       } else if (errorMsg.includes('401') || errorMsg.includes('Invalid Authentication') || errorMsg.includes('Unauthorized')) {
-        errorMsg = 'API 密钥无效或未配置，请联系运营者检查后台 API 密钥。';
+        errorMsg = text('errorAuth');
       }
       
       setError(errorMsg);
@@ -535,7 +723,7 @@ export default function Home() {
 
   const handleGenerate = async () => {
     if (!prompt.trim()) {
-      setError('请输入排版或生成要求');
+      setError(text('errorNeedPrompt'));
       return;
     }
 
@@ -543,6 +731,7 @@ export default function Home() {
       prompt,
       content,
       model,
+      locale,
       wordCount,
       writingStyle,
       eduLevel,
@@ -559,8 +748,8 @@ export default function Home() {
 
     await executeGenerate(
       payload, 
-      uploadedImages.length > 0 ? '正在分析图片...' : '正在分析需求...', 
-      '正在生成内容...'
+      uploadedImages.length > 0 ? text('analyzingImages') : text('analyzingText'),
+      text('generatingText')
     );
   };
 
@@ -569,9 +758,12 @@ export default function Home() {
     if (!instruction.trim()) return;
 
     const payload = {
-      prompt: "【后期优化/修改要求】：\n" + instruction + "\n\n请严格基于下方提供的【当前已有内容】进行修改和润色，不要偏离原意，保持原文未要求修改的部分基本不变。",
+      prompt: locale === 'zh'
+        ? "【后期优化/修改要求】：\n" + instruction + "\n\n请严格基于下方提供的【当前已有内容】进行修改和润色，不要偏离原意，保持原文未要求修改的部分基本不变。"
+        : "Refinement request:\n" + instruction + "\n\nPlease revise and improve the content strictly based on the current draft below. Keep the original meaning and avoid unnecessary changes.",
       content: cleanMarkdown, // Use currently generated content as the new base context
       model,
+      locale,
       wordCount,
       writingStyle,
       eduLevel,
@@ -589,8 +781,8 @@ export default function Home() {
     setRefinePrompt('');
     await executeGenerate(
       payload, 
-      '正在阅读当前内容并构思优化方案...', 
-      '正在润色生成中...'
+      text('refineAnalyzing'),
+      text('refineGenerating')
     );
   };
 
@@ -825,7 +1017,7 @@ export default function Home() {
       });
 
       if (!response.ok) {
-        throw new Error('下载失败');
+        throw new Error(text('errorDownload'));
       }
 
       const blob = await response.blob();
@@ -904,14 +1096,36 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2 text-indigo-600">
             <Wand2 className="w-6 h-6" />
-            <h1 className="text-xl font-bold text-gray-900">AI Word 排版美化助手</h1>
+            <h1 className="text-xl font-bold text-gray-900">{text('appTitle')}</h1>
           </div>
           <div className="flex items-center gap-3">
             <div className="rounded-lg bg-gray-100 px-3 py-1.5 text-sm font-medium text-indigo-700">
-              排版美化
+              {text('navFormatter')}
+            </div>
+            <div className="hidden md:flex rounded-lg bg-gray-100 p-1">
+              <button
+                type="button"
+                onClick={() => setLocale('en')}
+                className={cn(
+                  'px-3 py-1.5 rounded-md text-sm font-medium transition-colors',
+                  locale === 'en' ? 'bg-white text-indigo-700 shadow-sm' : 'text-gray-600 hover:text-gray-900'
+                )}
+              >
+                EN
+              </button>
+              <button
+                type="button"
+                onClick={() => setLocale('zh')}
+                className={cn(
+                  'px-3 py-1.5 rounded-md text-sm font-medium transition-colors',
+                  locale === 'zh' ? 'bg-white text-indigo-700 shadow-sm' : 'text-gray-600 hover:text-gray-900'
+                )}
+              >
+                中文
+              </button>
             </div>
             <div className="px-3 py-1 rounded-full bg-indigo-50 border border-indigo-200 text-indigo-700 text-sm font-semibold hidden md:block">
-              新平台启动，全站免费体验中
+              {text('badgeBeta')}
             </div>
           </div>
         </div>
@@ -926,103 +1140,103 @@ export default function Home() {
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
               <h2 className="text-lg font-semibold text-gray-800 mb-6 flex items-center gap-2">
                 <SlidersHorizontal className="w-5 h-5 text-indigo-500" />
-                高级参数设置
+                {text('advancedTitle')}
               </h2>
               <div className="space-y-5">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    指定字数 (可选)
+                    {text('wordCountLabel')}
                   </label>
                   <input
                     type="number"
                     value={wordCount}
                     onChange={(e) => setWordCount(e.target.value)}
-                    placeholder="例如: 1000"
+                    placeholder={locale === 'zh' ? '例如: 1000' : 'e.g. 1000'}
                     className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:ring-1 focus:ring-indigo-500 outline-none bg-white"
                   />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    文笔风格 (可选)
+                    {text('writingStyleLabel')}
                   </label>
                   <select
                     value={writingStyle}
                     onChange={(e) => setWritingStyle(e.target.value)}
                     className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:ring-1 focus:ring-indigo-500 outline-none bg-white"
                   >
-                    {WRITING_STYLES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+                    {writingStyleOptions.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
                   </select>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    写作水平角色 (可选)
+                    {text('eduLevelLabel')}
                   </label>
                   <select
                     value={eduLevel}
                     onChange={(e) => setEduLevel(e.target.value)}
                     className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:ring-1 focus:ring-indigo-500 outline-none bg-white"
                   >
-                    {EDU_LEVELS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+                    {eduLevelOptions.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
                   </select>
                 </div>
                 {eduLevel && (
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      水平等级
+                      {text('perfLevelLabel')}
                     </label>
                     <select
                       value={perfLevel}
                       onChange={(e) => setPerfLevel(e.target.value)}
                       className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:ring-1 focus:ring-indigo-500 outline-none bg-white"
                     >
-                      {PERF_LEVELS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+                      {perfLevelOptions.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
                     </select>
                   </div>
                 )}
                 <div className="flex flex-col gap-2 pt-2 border-t border-gray-100">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-gray-800">添加随机错别字</span>
+                    <span className="text-sm font-medium text-gray-800">{text('addTyposLabel')}</span>
                     <label className="relative inline-flex items-center cursor-pointer">
                       <input type="checkbox" className="sr-only peer" checked={addTypos} onChange={(e) => setAddTypos(e.target.checked)} />
                       <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
                     </label>
                   </div>
-                  <span className="text-xs text-gray-500">开启后文章中将随机出现1-5个错别字</span>
+                  <span className="text-xs text-gray-500">{text('addTyposHint')}</span>
                 </div>
                 <div className="flex flex-col gap-2">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-gray-800">真人思考痕迹</span>
+                    <span className="text-sm font-medium text-gray-800">{text('humanTraceLabel')}</span>
                     <label className="relative inline-flex items-center cursor-pointer">
                       <input type="checkbox" className="sr-only peer" checked={humanTrace} onChange={(e) => setHumanTrace(e.target.checked)} />
                       <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
                     </label>
                   </div>
-                  <span className="text-xs text-gray-500">开启后会增加自然推敲、对比与自我修正语气，模拟真人写作过程</span>
+                  <span className="text-xs text-gray-500">{text('humanTraceHint')}</span>
                 </div>
                 <div className="flex flex-col gap-2">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-gray-800">数据与案例支撑</span>
+                    <span className="text-sm font-medium text-gray-800">{text('evidenceLabel')}</span>
                     <label className="relative inline-flex items-center cursor-pointer">
                       <input type="checkbox" className="sr-only peer" checked={enableEvidenceSupport} onChange={(e) => setEnableEvidenceSupport(e.target.checked)} />
                       <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
                     </label>
                   </div>
-                  <span className="text-xs text-gray-500">开启后会在合适段落插入可核验的来源引用（网址、论文或文章）</span>
+                  <span className="text-xs text-gray-500">{text('evidenceHint')}</span>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    自动图示插入
+                    {text('diagramLabel')}
                   </label>
                   <select
                     value={diagramMode}
                     onChange={(e) => setDiagramMode(e.target.value)}
                     className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:ring-1 focus:ring-indigo-500 outline-none bg-white"
                   >
-                    {DIAGRAM_MODES.map((mode) => (
+                    {diagramModeOptions.map((mode) => (
                       <option key={mode.value} value={mode.value}>{mode.label}</option>
                     ))}
                   </select>
-                  <p className="mt-1 text-xs text-gray-500">可选在正文关键位置自动插入 Mermaid 图示代码块，便于梳理结构和流程。</p>
+                  <p className="mt-1 text-xs text-gray-500">{text('diagramHint')}</p>
                 </div>
               </div>
             </div>
@@ -1031,11 +1245,11 @@ export default function Home() {
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
               <h2 className="text-lg font-semibold text-gray-800 mb-6 flex items-center gap-2">
                 <FileText className="w-5 h-5 text-indigo-500" />
-                署名与日期
+                {text('signatureTitle')}
               </h2>
               <div className="space-y-5">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-gray-800">启用署名与日期</span>
+                  <span className="text-sm font-medium text-gray-800">{text('signatureToggle')}</span>
                   <label className="relative inline-flex items-center cursor-pointer">
                     <input type="checkbox" className="sr-only peer" checked={enableSignatureDate} onChange={(e) => setEnableSignatureDate(e.target.checked)} />
                     <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
@@ -1045,32 +1259,32 @@ export default function Home() {
                   <>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        文档署名 / 报告者 (可选)
+                        {text('authorLabel')}
                       </label>
                       <input
                         type="text"
                         value={authorName}
                         onChange={(e) => setAuthorName(e.target.value)}
-                        placeholder="不填写则用 'XXX' 代替"
+                        placeholder={text('authorPlaceholder')}
                         className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:ring-1 focus:ring-indigo-500 outline-none bg-white"
                       />
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        落款日期 (可选)
+                        {text('dateLabel')}
                       </label>
                       <input
                         type="text"
                         value={documentDate}
                         onChange={(e) => setDocumentDate(e.target.value)}
-                        placeholder="不填则自动获取今日日期"
+                        placeholder={text('datePlaceholder')}
                         className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:ring-1 focus:ring-indigo-500 outline-none bg-white"
                       />
                     </div>
                   </>
                 ) : (
                   <div className="text-xs text-gray-500">
-                    已关闭：生成内容中将不包含署名与落款日期，涉及时间时仅允许基于已提供资料。
+                    {text('signatureOffHint')}
                   </div>
                 )}
               </div>
@@ -1083,12 +1297,12 @@ export default function Home() {
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <div className="flex items-center gap-2 mb-4 text-gray-800">
               <Settings className="w-5 h-5 text-gray-500" />
-              <h2 className="text-lg font-semibold">生成设置</h2>
+              <h2 className="text-lg font-semibold">{text('generationSettings')}</h2>
             </div>
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  选择模型
+                  {text('chooseModel')}
                 </label>
                 <select
                   value={model}
@@ -1097,24 +1311,24 @@ export default function Home() {
                 >
                   {visibleModels.map((m) => (
                     <option key={m.value} value={m.value}>
-                      {m.label}{m.supportsImage ? ' · 支持图片' : ' · 仅纯文本'}
+                      {m.label}{m.supportsImage ? (locale === 'zh' ? ' · 支持图片' : ' · Vision') : (locale === 'zh' ? ' · 仅文本' : ' · Text')}
                     </option>
                   ))}
                 </select>
                 {hasImages && (
                   <p className="mt-2 text-xs text-gray-500">
-                    已上传图片：下拉框仅显示支持图片理解的多模态模型。
+                    {text('modelHintVisionOnly')}
                   </p>
                 )}
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  排版/生成要求 <span className="text-red-500">*</span>
+                  {text('promptLabel')} <span className="text-red-500">*</span>
                 </label>
                 <textarea
                   value={prompt}
                   onChange={(e) => setPrompt(e.target.value)}
-                  placeholder="例如：请帮我写一份关于AI技术在医疗领域应用的商业计划书，要求排版专业，包含标题、正文、列表和总结..."
+                  placeholder={text('promptPlaceholder')}
                   className="w-full rounded-lg border border-gray-300 px-4 py-3 text-gray-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all resize-none"
                   rows={4}
                 />
@@ -1130,16 +1344,16 @@ export default function Home() {
             >
               <div className="flex items-center gap-2 text-gray-800">
                 <FileText className="w-5 h-5 text-gray-500" />
-                <h2 className="text-lg font-semibold">原始内容 (可选)</h2>
+                <h2 className="text-lg font-semibold">{text('contentCardTitle')}</h2>
                 {content && (
                   <span className="ml-2 text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full font-medium">
-                    已填写
+                    {text('contentFilled')}
                   </span>
                 )}
               </div>
               <div className="flex items-center gap-3">
                 <span className="text-xs text-gray-500 hidden sm:inline-block">
-                  如需美化已有文档，请展开粘贴文本或上传
+                  {text('contentHint')}
                 </span>
                 <div className="p-1 rounded-full bg-gray-100 text-gray-500">
                   {isContentOpen ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
@@ -1150,7 +1364,7 @@ export default function Home() {
             {isContentOpen && (
               <div className="px-6 pb-6 border-t border-gray-100 pt-4 bg-gray-50/30">
                 <div className="flex items-center justify-between mb-3">
-                  <div className="text-sm font-medium text-gray-700">文本内容</div>
+                  <div className="text-sm font-medium text-gray-700">{locale === 'zh' ? '文本内容' : 'Text content'}</div>
                   <div className="flex items-center gap-3">
                     <input 
                       type="file" 
@@ -1168,14 +1382,14 @@ export default function Home() {
                       className="text-xs flex items-center gap-1 text-indigo-600 bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-md transition-colors"
                     >
                       {isUploading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
-                      上传 Word 提取文字
+                      {locale === 'zh' ? '上传 Word 提取文字' : 'Upload .docx'}
                     </button>
                   </div>
                 </div>
                 <textarea
                   value={content}
                   onChange={(e) => setContent(e.target.value)}
-                  placeholder="在此粘贴需要美化或润色的文本内容..."
+                  placeholder={locale === 'zh' ? '在此粘贴需要美化或润色的文本内容...' : 'Paste the text you want to format or improve...'}
                   className="w-full rounded-lg border border-gray-300 px-4 py-3 text-gray-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all resize-none font-mono text-sm bg-white"
                   rows={8}
                 />
@@ -1188,15 +1402,15 @@ export default function Home() {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 text-gray-800">
                     <ImagePlus className="w-5 h-5 text-gray-500" />
-                    <h2 className="text-lg font-semibold">上传图片 (可选)</h2>
+                    <h2 className="text-lg font-semibold">{locale === 'zh' ? '上传图片 (可选)' : 'Images (Optional)'}</h2>
                   </div>
                   <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
-                    上传图片并要求AI插入到文档中
+                    {locale === 'zh' ? '上传图片并要求AI插入到文档中' : 'Upload images and let the model reference them'}
                   </span>
                 </div>
                 <div className="text-xs text-indigo-600 bg-indigo-50 p-2 rounded-md flex items-start gap-1">
                   <Wand2 className="w-4 h-4 shrink-0" />
-                  <span>上传图片后，AI 将会自动分析图片内容并将其插入到文章的相应位置，确保上下文连贯且图文不跑偏。若上传 GIF，将自动提取首帧按静态图处理。</span>
+                  <span>{locale === 'zh' ? '上传图片后，AI 将会自动分析图片内容并将其插入到文章的相应位置，确保上下文连贯且图文不跑偏。若上传 GIF，将自动提取首帧按静态图处理。' : 'After you upload images, the model can analyze them and incorporate relevant details into the document. GIFs are handled as the first frame.'}</span>
                 </div>
               </div>
             
@@ -1226,7 +1440,7 @@ export default function Home() {
                 className="flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-gray-300 hover:border-indigo-500 hover:bg-indigo-50 transition-colors aspect-square text-gray-500 hover:text-indigo-600"
               >
                 <ImagePlus className="w-6 h-6" />
-                <span className="text-xs font-medium">添加图片</span>
+                <span className="text-xs font-medium">{locale === 'zh' ? '添加图片' : 'Add images'}</span>
               </button>
             </div>
             <input
@@ -1243,7 +1457,7 @@ export default function Home() {
           {/* Right Column: Actions & Status */}
           <div className="w-full lg:w-[40%] lg:h-full lg:overflow-y-auto lg:pr-2 pb-6 flex flex-col custom-scrollbar">
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 flex flex-col min-h-max">
-              <h2 className="text-lg font-semibold text-gray-800 mb-4 shrink-0">操作面板</h2>
+              <h2 className="text-lg font-semibold text-gray-800 mb-4 shrink-0">{locale === 'zh' ? '操作面板' : 'Actions'}</h2>
               
               <button
                 onClick={handleGenerate}
@@ -1258,32 +1472,32 @@ export default function Home() {
                 {isFetching || isTyping ? (
                   <>
                     <Loader2 className="w-5 h-5 animate-spin" />
-                    {statusMsg || '正在生成内容...'}
+                    {statusMsg || text('generatingDefault')}
                   </>
                 ) : (
                   <>
                     <Wand2 className="w-5 h-5" />
-                    开始排版并生成
+                    {locale === 'zh' ? '开始排版并生成' : 'Generate & Format'}
                   </>
                 )}
               </button>
 
               <div className="text-xs text-gray-500 text-center mt-3 shrink-0">
-                点击开始排版并生成即表示您同意本站的
-                <button onClick={() => setIsAgreementModalOpen(true)} className="text-indigo-600 hover:underline mx-1">《用户协议》</button>
-                与
-                <button onClick={() => setIsPrivacyModalOpen(true)} className="text-indigo-600 hover:underline ml-1">《隐私政策》</button>
+                {locale === 'zh' ? '点击开始排版并生成即表示您同意本站的' : 'By using this site, you agree to the'}
+                <button onClick={() => setIsAgreementModalOpen(true)} className="text-indigo-600 hover:underline mx-1">{text('agreementBrackets')}</button>
+                {locale === 'zh' ? '与' : 'and'}
+                <button onClick={() => setIsPrivacyModalOpen(true)} className="text-indigo-600 hover:underline ml-1">{text('privacyBrackets')}</button>
               </div>
 
               {/* Generated Content View */}
               {(displayedMarkdown || isFetching || isTyping) && (
                 <div className="mt-6 border border-gray-200 rounded-lg overflow-hidden bg-gray-50 flex flex-col flex-1 min-h-[300px] transition-all">
                   <div className="bg-gray-100 border-b border-gray-200 px-3 py-2 flex items-center justify-between shrink-0">
-                    <span className="text-xs font-medium text-gray-600">生成预览</span>
+                    <span className="text-xs font-medium text-gray-600">{locale === 'zh' ? '生成预览' : 'Preview'}</span>
                     <button 
                       onClick={() => setIsModalOpen(true)}
                       className="text-gray-500 hover:text-indigo-600 p-1 rounded hover:bg-gray-200 transition-colors"
-                      title="全屏查看"
+                      title={locale === 'zh' ? '全屏查看' : 'Fullscreen'}
                     >
                       <Maximize2 className="w-4 h-4" />
                     </button>
@@ -1303,7 +1517,7 @@ export default function Home() {
                       </Markdown>
                     ) : (
                       <div className="text-gray-400 flex items-center justify-center h-full w-full gap-2 animate-pulse">
-                        <Loader2 className="w-4 h-4 animate-spin" /> {statusMsg || '正在思考中...'}
+                        <Loader2 className="w-4 h-4 animate-spin" /> {statusMsg || (locale === 'zh' ? '正在思考中...' : 'Thinking...')}
                       </div>
                     )}
                   </div>
@@ -1323,7 +1537,7 @@ export default function Home() {
                     ) : (
                       <Download className="w-4 h-4" />
                     )}
-                    下载 Word 文档
+                    {text('downloadButton')}
                   </button>
                 </div>
               </div>
@@ -1334,13 +1548,13 @@ export default function Home() {
               <div className="mt-4 bg-indigo-50/50 rounded-xl border border-indigo-100 p-5 shrink-0 transition-all">
                 <h3 className="text-sm font-semibold text-indigo-900 mb-3 flex items-center gap-2">
                   <Wand2 className="w-4 h-4" />
-                  对结果不满意？继续润色优化
+                  {locale === 'zh' ? '对结果不满意？继续润色优化' : 'Refine the draft'}
                 </h3>
                 <div className="flex flex-wrap gap-2 mb-4">
-                  <button onClick={() => handleRefine('请帮我自动润色一下这篇文章，使其更加通顺流畅、用词更专业准确。')} className="text-xs bg-white border border-indigo-200 text-indigo-600 px-3 py-1.5 rounded-full hover:bg-indigo-100 hover:border-indigo-300 transition-colors">自动润色</button>
-                  <button onClick={() => handleRefine('请帮我扩写当前内容，增加更多的细节和生动的描述，使其更加丰富。')} className="text-xs bg-white border border-indigo-200 text-indigo-600 px-3 py-1.5 rounded-full hover:bg-indigo-100 hover:border-indigo-300 transition-colors">丰富扩写</button>
-                  <button onClick={() => handleRefine('请帮我精简当前内容，去除冗余词句，保留核心信息即可。')} className="text-xs bg-white border border-indigo-200 text-indigo-600 px-3 py-1.5 rounded-full hover:bg-indigo-100 hover:border-indigo-300 transition-colors">精简缩写</button>
-                  <button onClick={() => handleRefine('请帮我调整这篇文章的语气，使其显得更加正式和严谨。')} className="text-xs bg-white border border-indigo-200 text-indigo-600 px-3 py-1.5 rounded-full hover:bg-indigo-100 hover:border-indigo-300 transition-colors">更正式</button>
+                  <button onClick={() => handleRefine(locale === 'zh' ? '请帮我自动润色一下这篇文章，使其更加通顺流畅、用词更专业准确。' : 'Polish the draft for clarity and professionalism.')} className="text-xs bg-white border border-indigo-200 text-indigo-600 px-3 py-1.5 rounded-full hover:bg-indigo-100 hover:border-indigo-300 transition-colors">{locale === 'zh' ? '自动润色' : 'Polish'}</button>
+                  <button onClick={() => handleRefine(locale === 'zh' ? '请帮我扩写当前内容，增加更多的细节和生动的描述，使其更加丰富。' : 'Expand the draft with more detail and examples while keeping it coherent.')} className="text-xs bg-white border border-indigo-200 text-indigo-600 px-3 py-1.5 rounded-full hover:bg-indigo-100 hover:border-indigo-300 transition-colors">{locale === 'zh' ? '丰富扩写' : 'Expand'}</button>
+                  <button onClick={() => handleRefine(locale === 'zh' ? '请帮我精简当前内容，去除冗余词句，保留核心信息即可。' : 'Shorten the draft by removing redundancy while keeping the key information.')} className="text-xs bg-white border border-indigo-200 text-indigo-600 px-3 py-1.5 rounded-full hover:bg-indigo-100 hover:border-indigo-300 transition-colors">{locale === 'zh' ? '精简缩写' : 'Shorten'}</button>
+                  <button onClick={() => handleRefine(locale === 'zh' ? '请帮我调整这篇文章的语气，使其显得更加正式和严谨。' : 'Make the tone more formal and rigorous.')} className="text-xs bg-white border border-indigo-200 text-indigo-600 px-3 py-1.5 rounded-full hover:bg-indigo-100 hover:border-indigo-300 transition-colors">{locale === 'zh' ? '更正式' : 'More formal'}</button>
                 </div>
                 <div className="flex gap-2">
                   <input 
@@ -1348,7 +1562,7 @@ export default function Home() {
                     value={refinePrompt}
                     onChange={(e) => setRefinePrompt(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && handleRefine()}
-                    placeholder="或输入具体修改要求，如：把第二段改得更幽默..." 
+                    placeholder={text('refinePlaceholder')}
                     className="flex-1 rounded-lg border border-indigo-200 px-3 py-2 text-sm focus:ring-1 focus:ring-indigo-500 outline-none bg-white"
                   />
                   <button 
@@ -1356,7 +1570,7 @@ export default function Home() {
                     disabled={!refinePrompt.trim()}
                     className="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
                   >
-                    重新生成
+                    {text('refineButton')}
                   </button>
                 </div>
               </div>
@@ -1374,33 +1588,18 @@ export default function Home() {
                 {success && (
                   <div className="p-4 bg-green-50 border border-green-100 rounded-lg flex items-start gap-3 text-green-700">
                     <Download className="w-5 h-5 shrink-0 mt-0.5" />
-                    <p className="text-sm">生成成功！Word文档已开始下载。</p>
+                    <p className="text-sm">{text('generateSuccess')}</p>
                   </div>
                 )}
 
                 <div className="pt-6 border-t border-gray-100 pb-4">
-                  <h3 className="text-sm font-medium text-gray-900 mb-2">使用说明与免责声明</h3>
+                  <h3 className="text-sm font-medium text-gray-900 mb-2">{locale === 'zh' ? '使用说明与免责声明' : 'Usage & Disclaimer'}</h3>
                   <ul className="text-sm text-gray-600 space-y-2 list-disc list-inside pl-1 mb-4">
-                    <li><strong>直接生成：</strong>在左侧输入具体要求，点击生成即可获取完整排版的Word文档。</li>
-                    <li><strong>排版美化：</strong>将已有内容粘贴到左侧文本框，并在要求中说明想要的排版风格。</li>
-                    <li>由于 AI 生成速度视内容长度而定，请耐心等待。</li>
+                    <li><strong>{locale === 'zh' ? '直接生成：' : 'Generate:'}</strong> {locale === 'zh' ? '输入要求并点击生成，即可获得结构清晰、可下载的 Word 文档。' : 'Enter instructions and click Generate to get a well-structured draft and a downloadable .docx.'}</li>
+                    <li><strong>{locale === 'zh' ? '排版美化：' : 'Beautify:'}</strong> {locale === 'zh' ? '粘贴已有内容或上传 .docx，并在要求中说明目标风格与结构。' : 'Paste existing content or upload a .docx, then describe the desired style and structure.'}</li>
+                    <li>{locale === 'zh' ? '生成速度取决于内容长度与所选模型，请耐心等待。' : 'Generation speed depends on content length and the selected model. Please wait.'}</li>
+                    <li>{locale === 'zh' ? '请勿上传敏感信息（身份证、银行卡、账号密码、商业机密等）。' : 'Do not upload sensitive information (IDs, bank details, passwords, trade secrets, etc.).'}</li>
                   </ul>
-                  <div className="p-3 bg-amber-50 border border-amber-100 rounded-md">
-                    <p className="text-xs text-amber-800 leading-relaxed text-justify">
-                      <strong>个人运营提示：</strong>本工具为个人独立运营，依赖上游商业模型接口。高峰期可能会遇到请求响应较长或达到并发速率限制的情况，请耐心等待或稍后再试；若页面提示“余额不足”等错误，则为个人运营者的上游 API 额度已耗尽，敬请谅解。
-                    </p>
-                    {/* <div className="mt-3 p-3 bg-indigo-50 border border-indigo-100 rounded-md flex items-start gap-2 cursor-pointer hover:bg-indigo-100 transition-colors" onClick={() => setIsDonateModalOpen(true)}>
-                      <Heart className="w-4 h-4 text-indigo-500 shrink-0 mt-0.5" />
-                      <p className="text-xs text-indigo-700 leading-relaxed">
-                        如果觉得该工具好用，欢迎向我捐赠。若您使用 USDT，可直接参考下方网络与地址进行捐助。您的支持将用于维持服务器的稳定运行和上游大模型 API 余额的充值，让好工具走得更远。同时也欢迎大家提出宝贵的意见！
-                      </p>
-                    </div> */}
-                    {/* <div className="mt-3 p-3 bg-indigo-50 border border-indigo-100 rounded-md">
-                      <p className="text-xs text-indigo-700 leading-relaxed">
-                        新平台启动，全站免费体验中。
-                      </p>
-                    </div> */}
-                  </div>
                 </div>
               </div>
             </div>
@@ -1411,11 +1610,11 @@ export default function Home() {
       {/* Footer */}
       <footer className="bg-white border-t border-gray-200 shrink-0 py-4">
         <div className="max-w-7xl mx-auto px-4 text-center text-sm text-gray-500 flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-6">
-          <p>violet运营</p>
+          <p>{text('footerBrand')}</p>
           <p className="hidden sm:block">|</p>
           <div className="flex items-center gap-4">
-            <button onClick={() => setIsAgreementModalOpen(true)} className="hover:text-indigo-600 transition-colors">用户协议</button>
-            <button onClick={() => setIsPrivacyModalOpen(true)} className="hover:text-indigo-600 transition-colors">隐私政策</button>
+            <button onClick={() => setIsAgreementModalOpen(true)} className="hover:text-indigo-600 transition-colors">{text('agreement')}</button>
+            <button onClick={() => setIsPrivacyModalOpen(true)} className="hover:text-indigo-600 transition-colors">{text('privacy')}</button>
           </div>
         </div>
       </footer>
@@ -1496,7 +1695,7 @@ export default function Home() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[80vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
             <div className="flex items-center justify-between p-4 border-b border-gray-100">
-              <h3 className="font-semibold text-gray-800 text-lg">隐私政策</h3>
+              <h3 className="font-semibold text-gray-800 text-lg">{text('privacyTitle')}</h3>
               <button 
                 onClick={() => setIsPrivacyModalOpen(false)}
                 className="p-2 bg-gray-100 hover:bg-gray-200 rounded-full text-gray-600 transition-colors"
@@ -1505,14 +1704,29 @@ export default function Home() {
               </button>
             </div>
             <div className="p-6 overflow-y-auto flex-1 prose prose-sm max-w-none text-gray-600 custom-scrollbar">
-              <h4>1. 数据收集与流转</h4>
-              <p>根据《中华人民共和国个人信息保护法》及《中华人民共和国数据安全法》的相关规定，本工具作为一个前端中间件平台，承诺**不在本地或云端数据库中保存、记录、或截留您上传的任何文本或图片内容**。您输入的所有排版要求、文本以及图片，将通过加密传输协议（HTTPS）直接发送至上游的 AI 服务提供商（如智谱 AI、月之暗面等）的 API 接口进行实时推理与生成。</p>
-              <h4>2. 上游数据安全与隐私边界</h4>
-              <p>本平台不控制上游 AI 厂商的数据处理行为。您的数据安全和隐私保护受限于所选模型提供商（Zhipu AI、Moonshot AI 等）的用户协议与隐私政策。本平台强烈建议您**不要在使用本工具时上传任何包含国家机密、商业机密、敏感个人隐私信息（如身份证、银行卡等）的内容**。</p>
-              <h4>3. 模型训练声明</h4>
-              <p>本平台自身**绝对不会**利用您上传的任何数据进行模型训练或微调。关于上游 AI 厂商是否会利用您的 API 请求数据进行模型迭代，请参阅其官方声明。一般情况下，API 接入商会承诺不对企业接口数据进行训练，但请以官方最新政策为准。</p>
-              <h4>4. 政策更新与联系我们</h4>
-              <p>我们保留随时更新本政策的权利。如您对本隐私政策或您的数据安全有任何疑问，请通过其他渠道与我们联系。</p>
+              {locale === 'zh' ? (
+                <>
+                  <h4>1. 数据收集与流转</h4>
+                  <p>根据《中华人民共和国个人信息保护法》及《中华人民共和国数据安全法》的相关规定，本工具作为一个前端中间件平台，承诺**不在本地或云端数据库中保存、记录、或截留您上传的任何文本或图片内容**。您输入的所有排版要求、文本以及图片，将通过加密传输协议（HTTPS）直接发送至上游的 AI 服务提供商（如智谱 AI、月之暗面等）的 API 接口进行实时推理与生成。</p>
+                  <h4>2. 上游数据安全与隐私边界</h4>
+                  <p>本平台不控制上游 AI 厂商的数据处理行为。您的数据安全和隐私保护受限于所选模型提供商（Zhipu AI、Moonshot AI 等）的用户协议与隐私政策。本平台强烈建议您**不要在使用本工具时上传任何包含国家机密、商业机密、敏感个人隐私信息（如身份证、银行卡等）的内容**。</p>
+                  <h4>3. 模型训练声明</h4>
+                  <p>本平台自身**绝对不会**利用您上传的任何数据进行模型训练或微调。关于上游 AI 厂商是否会利用您的 API 请求数据进行模型迭代，请参阅其官方声明。一般情况下，API 接入商会承诺不对企业接口数据进行训练，但请以官方最新政策为准。</p>
+                  <h4>4. 政策更新</h4>
+                  <p>我们保留随时更新本政策的权利。本政策变更后将以最新版本为准。</p>
+                </>
+              ) : (
+                <>
+                  <h4>1. Data flow</h4>
+                  <p>This site does not store or retain your prompt, text, or images in a database for the purpose of providing the formatting service. Your inputs are transmitted over HTTPS to the selected model provider for real-time inference.</p>
+                  <h4>2. Third-party processing</h4>
+                  <p>Your data may be processed by third-party AI providers depending on the model you choose. Please review the provider’s terms and privacy policy for details.</p>
+                  <h4>3. Model training</h4>
+                  <p>This site does not use your inputs to train or fine-tune models. For third-party providers, refer to their official statements regarding data retention and training.</p>
+                  <h4>4. Updates</h4>
+                  <p>We may update this policy from time to time. The latest version will apply.</p>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -1523,7 +1737,7 @@ export default function Home() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[80vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
             <div className="flex items-center justify-between p-4 border-b border-gray-100">
-              <h3 className="font-semibold text-gray-800 text-lg">用户协议</h3>
+              <h3 className="font-semibold text-gray-800 text-lg">{text('agreementTitle')}</h3>
               <button 
                 onClick={() => setIsAgreementModalOpen(false)}
                 className="p-2 bg-gray-100 hover:bg-gray-200 rounded-full text-gray-600 transition-colors"
@@ -1532,14 +1746,29 @@ export default function Home() {
               </button>
             </div>
             <div className="p-6 overflow-y-auto flex-1 prose prose-sm max-w-none text-gray-600 custom-scrollbar">
-              <h4>1. 服务说明</h4>
-              <p>“AI Word 排版美化助手”为您提供基于人工智能的文档生成与排版美化服务。您应合法、合规地使用本工具，不得利用本工具生成违反国家法律法规、危害国家安全、破坏社会稳定、侵犯他人合法权益的内容。</p>
-              <h4>2. 知识产权与版权风险申明</h4>
-              <p>本平台不主动使用未经授权的特定字体、模板或受版权保护的图片进行内容生成。但请注意，由于 AI 模型的特性，生成的文本或内容可能偶有雷同，或者模型在训练时可能受到未知数据的干扰。<strong>用户需自行对使用本工具生成的文档负责，并承担因商用等目的引发的任何版权、著作权纠纷的直接或间接法律责任。</strong></p>
-              <h4>3. 服务的可用性与免责声明</h4>
-              <p>由于网络环境、第三方 AI 接口稳定性等不可抗力因素，本服务不保证 100% 的持续可用性。因服务中断、数据丢失导致的任何直接或间接损失，本平台不承担赔偿责任。</p>
-              <h4>4. 违规行为处理</h4>
-              <p>若发现用户恶意利用本平台生成涉黄、涉暴、涉政等违法违规内容，我们有权立即停止为其提供服务，并配合有关部门的调查。</p>
+              {locale === 'zh' ? (
+                <>
+                  <h4>1. 服务说明</h4>
+                  <p>“AI Word 排版美化助手”为您提供基于人工智能的文档生成与排版美化服务。您应合法、合规地使用本工具，不得利用本工具生成违反国家法律法规、危害国家安全、破坏社会稳定、侵犯他人合法权益的内容。</p>
+                  <h4>2. 知识产权与版权风险申明</h4>
+                  <p>本平台不主动使用未经授权的特定字体、模板或受版权保护的图片进行内容生成。但请注意，由于 AI 模型的特性，生成的文本或内容可能偶有雷同，或者模型在训练时可能受到未知数据的干扰。<strong>用户需自行对使用本工具生成的文档负责，并承担因商用等目的引发的任何版权、著作权纠纷的直接或间接法律责任。</strong></p>
+                  <h4>3. 服务的可用性与免责声明</h4>
+                  <p>由于网络环境、第三方 AI 接口稳定性等不可抗力因素，本服务不保证 100% 的持续可用性。因服务中断、数据丢失导致的任何直接或间接损失，本平台不承担赔偿责任。</p>
+                  <h4>4. 违规行为处理</h4>
+                  <p>若发现用户恶意利用本平台生成涉黄、涉暴、涉政等违法违规内容，我们有权立即停止为其提供服务，并配合有关部门的调查。</p>
+                </>
+              ) : (
+                <>
+                  <h4>1. Service description</h4>
+                  <p>This site provides AI-assisted document generation and formatting. You agree to use the service in compliance with applicable laws and regulations.</p>
+                  <h4>2. IP and copyright</h4>
+                  <p>AI-generated content may be similar to existing materials. You are responsible for reviewing outputs and ensuring you have the necessary rights before using them commercially.</p>
+                  <h4>3. Availability disclaimer</h4>
+                  <p>The service depends on network conditions and third-party model providers. We do not guarantee uninterrupted availability and are not liable for losses caused by outages.</p>
+                  <h4>4. Abuse</h4>
+                  <p>We may suspend access in cases of abuse, illegal usage, or attempts to disrupt the service.</p>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -1550,7 +1779,7 @@ export default function Home() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="bg-white rounded-xl shadow-xl w-full max-w-4xl h-full max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
             <div className="flex items-center justify-between p-4 border-b border-gray-100">
-              <h3 className="font-semibold text-gray-800">文档预览</h3>
+              <h3 className="font-semibold text-gray-800">{locale === 'zh' ? '文档预览' : 'Document preview'}</h3>
               <button 
                 onClick={() => setIsModalOpen(false)}
                 className="p-2 bg-gray-100 hover:bg-gray-200 rounded-full text-gray-600 transition-colors"
@@ -1582,7 +1811,7 @@ export default function Home() {
                   className="w-full sm:w-auto flex items-center justify-center gap-2 py-2 px-6 rounded-lg font-medium bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 shadow-sm transition-all"
                 >
                   {isCopied ? <Check className="w-5 h-5 text-green-600" /> : <Copy className="w-5 h-5" />}
-                  {isCopied ? '已复制' : '复制内容'}
+                  {isCopied ? (locale === 'zh' ? '已复制' : 'Copied') : (locale === 'zh' ? '复制内容' : 'Copy')}
                 </button>
               )}
               <button
@@ -1593,7 +1822,7 @@ export default function Home() {
                 className="w-full sm:w-auto flex items-center justify-center gap-2 py-2 px-6 rounded-lg font-medium bg-green-600 text-white hover:bg-green-700 shadow-sm transition-all"
               >
                 <Download className="w-5 h-5" />
-                下载 Word 文档
+                {text('downloadButton')}
               </button>
             </div>
           </div>

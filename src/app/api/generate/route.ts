@@ -301,6 +301,8 @@ async function fetchLatestEvidenceFromMcp(query: string): Promise<EvidenceItem[]
 }
 
 export async function POST(req: Request) {
+  let isZh = false;
+  const l = (zhText: string, enText: string) => (isZh ? zhText : enText);
   try {
     const zhipuOpenai = new OpenAI({
       apiKey: process.env.ZHIPU_API_KEY || '',
@@ -333,9 +335,10 @@ export async function POST(req: Request) {
       baseURL: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
     });
 
-    const { prompt, content, model, images, wordCount, writingStyle, eduLevel, perfLevel, addTypos, humanTrace, enableEvidenceSupport, diagramMode, enableSignatureDate, authorName, documentDate } = await req.json();
+    const { prompt, content, model, images, wordCount, writingStyle, eduLevel, perfLevel, addTypos, humanTrace, enableEvidenceSupport, diagramMode, enableSignatureDate, authorName, documentDate, locale } = await req.json();
     
     const hasImages = images && images.length > 0;
+    isZh = locale === 'zh';
     
     // Determine the provider and model
     const requestedModel = typeof model === 'string' ? model.trim() : '';
@@ -434,9 +437,16 @@ export async function POST(req: Request) {
 
     const selectedDiagramMode = diagramMode === 'mindmap' || diagramMode === 'flowchart' ? diagramMode : 'none';
     const formatInstruction = selectedDiagramMode === 'none'
-      ? '【格式最高指令】：**绝对不要**使用 ```markdown、```html 和 ``` 等代码块语法来包裹你的回答！请直接输出纯文本的正文内容！**绝对不要**在开头输出"html"或"markdown"等字眼！'
-      : '【格式最高指令】：禁止使用 ```markdown、```html 等普通代码块；仅允许在图示位置使用一个 ```mermaid ... ``` 代码块来输出图示，其他正文必须是正常 Markdown 文本，且绝对不要在开头输出"html"或"markdown"等字眼！';
-    const systemMessage = `你是一个专业的文档排版美化与编写专家。
+      ? l(
+        '【格式最高指令】：**绝对不要**使用 ```markdown、```html 和 ``` 等代码块语法来包裹你的回答！请直接输出纯文本的正文内容！**绝对不要**在开头输出"html"或"markdown"等字眼！',
+        'FORMAT RULE: Do not wrap the answer in ```markdown / ```html or any other code fence. Output Markdown directly and do not start with "html" or "markdown".'
+      )
+      : l(
+        '【格式最高指令】：禁止使用 ```markdown、```html 等普通代码块；仅允许在图示位置使用一个 ```mermaid ... ``` 代码块来输出图示，其他正文必须是正常 Markdown 文本，且绝对不要在开头输出"html"或"markdown"等字眼！',
+        'FORMAT RULE: Do not use ```markdown / ```html code fences. Only one ```mermaid ... ``` block is allowed for the diagram; the rest must be normal Markdown text.'
+      );
+    const systemMessage = isZh
+      ? `你是一个专业的文档排版美化与编写专家。
 你需要根据用户的要求和提供的原始内容（如果有的话），生成一份高质量的文档。
 请直接输出Markdown格式的文档内容，不需要额外的寒暄或解释。
 【排版最高指令】：必须严格遵循中文标准公文/报告的排版规范：
@@ -445,11 +455,20 @@ export async function POST(req: Request) {
 3. 层级分明：合理使用二级标题(##)、三级标题(###)和有序/无序列表，不要全部挤成一团。
 4. 重点内容使用加粗（**文字**）标出。
 ${formatInstruction}
-【表情最高指令】：绝对、永远不要在生成的文档或任何回答中使用任何表情符号（Emoji）和任何特殊图标！生成的文本必须是纯粹的汉字、标点和标准字符！一旦发现使用表情符号将导致系统崩溃。`;
+【表情最高指令】：绝对、永远不要在生成的文档或任何回答中使用任何表情符号（Emoji）和任何特殊图标！生成的文本必须是纯粹的汉字、标点和标准字符！一旦发现使用表情符号将导致系统崩溃。`
+      : `You are a professional document writer and formatter.
+Generate a high-quality document based on the user's requirements and the provided source content (if any).
+Output Markdown content directly with no extra small talk.
+Layout rules:
+1. The main title must be centered using <div align="center"><h1>Title</h1></div>.
+2. Use clear structure with headings (##, ###), lists, and paragraphs.
+3. Highlight key points with bold text.
+${formatInstruction}
+No-emoji rule: Never use emojis or decorative symbols anywhere in the output.`;
 
-    let textPrompt = `要求：${prompt}`;
+    let textPrompt = l(`要求：${prompt}`, `Requirements: ${prompt}`);
     if (content) {
-      textPrompt += `\n\n原始内容：\n${content}`;
+      textPrompt += l(`\n\n原始内容：\n${content}`, `\n\nSource content:\n${content}`);
     }
 
     const latestEvidence = enableEvidenceSupport
@@ -460,74 +479,137 @@ ${formatInstruction}
       const evidenceBlock = latestEvidence
         .slice(0, 6)
         .map((item, index) => {
-          const meta = [item.source, item.publishedAt].filter(Boolean).join('，');
-          return `- [E${index + 1}] ${item.title}${meta ? `（${meta}）` : ''}：${item.url}`;
+          const meta = [item.source, item.publishedAt].filter(Boolean).join(isZh ? '，' : ', ');
+          return isZh
+            ? `- [E${index + 1}] ${item.title}${meta ? `（${meta}）` : ''}：${item.url}`
+            : `- [E${index + 1}] ${item.title}${meta ? ` (${meta})` : ''}: ${item.url}`;
         })
         .join('\n');
-      textPrompt += `\n\n【MCP最新资料检索结果】：\n${evidenceBlock}`;
+      textPrompt += l(`\n\n【MCP最新资料检索结果】：\n${evidenceBlock}`, `\n\nLatest evidence from search:\n${evidenceBlock}`);
     }
 
     // Process advanced constraints
     const constraints = [];
     if (wordCount) {
-      constraints.push(`字数要求：大约 ${wordCount} 字左右`);
+      constraints.push(l(`字数要求：大约 ${wordCount} 字左右`, `Target length: about ${wordCount} words.`));
     }
     if (writingStyle) {
-      constraints.push(`文笔风格：${writingStyle}`);
+      constraints.push(l(`文笔风格：${writingStyle}`, `Writing style: ${writingStyle}.`));
     }
     if (eduLevel) {
       const levelDesc = perfLevel ? `${perfLevel}的${eduLevel}` : eduLevel;
-      constraints.push(`角色设定/写作水平：你需要模拟【${levelDesc}】的写作水平、思维深度和行文口吻来进行编写`);
+      constraints.push(l(
+        `角色设定/写作水平：你需要模拟【${levelDesc}】的写作水平、思维深度和行文口吻来进行编写`,
+        `Audience and proficiency: write in the style of "${eduLevel}" with a "${perfLevel || 'default'}" level.`
+      ));
     }
     if (addTypos) {
-      constraints.push(`错别字要求：必须在生成的正文中随机包含1到5个“同音错别字”或“形近错别字”（模拟人们使用拼音输入法时打错字的情况，不要出现读音完全不相关的离谱错字，要错得自然一些）。`);
+      constraints.push(l(
+        `错别字要求：必须在生成的正文中随机包含1到5个“同音错别字”或“形近错别字”（模拟人们使用拼音输入法时打错字的情况，不要出现读音完全不相关的离谱错字，要错得自然一些）。`,
+        'Typos: introduce 1 to 5 minor natural typos across the body to mimic human writing.'
+      ));
     }
     if (humanTrace) {
-      constraints.push('真人思考痕迹要求：写作语气要呈现自然推敲过程，适度出现“先……再……”“换个角度看”“更稳妥的是”等人类思考连接句；段落间允许少量自我修正与权衡表达，但保持逻辑清晰、结论明确。');
-      constraints.push('真人写作风格要求：避免机械重复句式，适当混用长短句与口语化过渡；绝对不要出现“作为AI”“模型认为”等机器身份表述。');
+      constraints.push(l(
+        '真人思考痕迹要求：写作语气要呈现自然推敲过程，适度出现“先……再……”“换个角度看”“更稳妥的是”等人类思考连接句；段落间允许少量自我修正与权衡表达，但保持逻辑清晰、结论明确。',
+        'Human-like trace: include mild self-corrections and reasoning transitions while keeping logic clear.'
+      ));
+      constraints.push(l(
+        '真人写作风格要求：避免机械重复句式，适当混用长短句与口语化过渡；绝对不要出现“作为AI”“模型认为”等机器身份表述。',
+        'Human writing style: avoid repetitive patterns; do not mention "as an AI" or any model identity.'
+      ));
     }
     if (selectedDiagramMode === 'mindmap') {
-      constraints.push('图示要求：请在正文中部最适合的位置插入1个 Mermaid 思维导图代码块，使用 ```mermaid 开始并以 ``` 结束。');
-      constraints.push('思维导图语法要求：必须使用 mindmap 语法，根节点概括主题，至少包含3个一级分支，并保证分支名称与正文要点一致。');
-      constraints.push('图示位置要求：图示前后各保留一段解释文字，不要把图示放在文末“参考资料”之后。');
-      constraints.push('图示兼容要求：图中节点文本禁止使用形如 [1] 的纯数字方括号，避免与引用编号冲突。');
+      constraints.push(l(
+        '图示要求：请在正文中部最适合的位置插入1个 Mermaid 思维导图代码块，使用 ```mermaid 开始并以 ``` 结束。',
+        'Diagram: insert one Mermaid mind map block in the most suitable position in the middle of the document using ```mermaid ... ```.'
+      ));
+      constraints.push(l(
+        '思维导图语法要求：必须使用 mindmap 语法，根节点概括主题，至少包含3个一级分支，并保证分支名称与正文要点一致。',
+        'Mind map syntax: use mindmap, include at least 3 top-level branches aligned with the main points.'
+      ));
+      constraints.push(l(
+        '图示位置要求：图示前后各保留一段解释文字，不要把图示放在文末“参考资料”之后。',
+        'Placement: keep explanatory paragraphs before and after the diagram; do not place it after references.'
+      ));
+      constraints.push(l(
+        '图示兼容要求：图中节点文本禁止使用形如 [1] 的纯数字方括号，避免与引用编号冲突。',
+        'Compatibility: do not use bracketed numeric tokens like [1] inside diagram nodes.'
+      ));
     }
     if (selectedDiagramMode === 'flowchart') {
-      constraints.push('图示要求：请在正文中部最适合的位置插入1个 Mermaid 流程图代码块，使用 ```mermaid 开始并以 ``` 结束。');
-      constraints.push('流程图语法要求：必须使用 flowchart TD 语法，至少包含6个节点与5条连接线，清晰体现步骤先后关系。');
-      constraints.push('图示位置要求：图示前后各保留一段解释文字，不要把图示放在文末“参考资料”之后。');
-      constraints.push('图示兼容要求：图中节点文本禁止使用形如 [1] 的纯数字方括号，避免与引用编号冲突。');
+      constraints.push(l(
+        '图示要求：请在正文中部最适合的位置插入1个 Mermaid 流程图代码块，使用 ```mermaid 开始并以 ``` 结束。',
+        'Diagram: insert one Mermaid flowchart block in the most suitable position in the middle of the document using ```mermaid ... ```.'
+      ));
+      constraints.push(l(
+        '流程图语法要求：必须使用 flowchart TD 语法，至少包含6个节点与5条连接线，清晰体现步骤先后关系。',
+        'Flowchart syntax: use flowchart TD with at least 6 nodes and 5 edges showing step order clearly.'
+      ));
+      constraints.push(l(
+        '图示位置要求：图示前后各保留一段解释文字，不要把图示放在文末“参考资料”之后。',
+        'Placement: keep explanatory paragraphs before and after the diagram; do not place it after references.'
+      ));
+      constraints.push(l(
+        '图示兼容要求：图中节点文本禁止使用形如 [1] 的纯数字方括号，避免与引用编号冲突。',
+        'Compatibility: do not use bracketed numeric tokens like [1] inside diagram nodes.'
+      ));
     }
     if (enableEvidenceSupport) {
-      constraints.push('数据与案例支撑要求：文中涉及关键结论、数据或案例时，必须在对应句子后插入来源标注，使用 [1]、[2] 这类编号引用。');
-      constraints.push('引用来源要求：优先引用可公开检索的统计公报、政府/机构官网、学术论文或权威媒体深度文章；引用信息应包含标题与可访问链接（URL）。');
-      constraints.push('文末参考资料要求：新增“## 参考资料”小节，按编号列出每条来源（格式建议：`[1] 标题 - 机构/作者，年份，URL`），并与正文编号一一对应。');
-      constraints.push('引用编号连续性要求：正文引用编号必须从 [1] 开始，按首次出现顺序连续递增；禁止跳号、重号、倒序与越号。');
-      constraints.push('首次引用强制规则：正文中第一处出现的引用编号必须是 [1]，第二个首次出现的来源必须是 [2]，以此类推。');
-      constraints.push('同句多引文排序规则：同一句若包含多个引用，必须按从小到大排列，如 [1][2][3]，禁止写成 [2][1] 或 [3][1][2]。');
-      constraints.push('引用映射一致性要求：正文中出现的每个编号都必须在“参考资料”中存在且仅对应一条；未在正文出现的编号不得出现在“参考资料”中。');
-      constraints.push('交付前自检要求：输出前必须逐条检查正文引用序列是否严格为 [1]...[N]，若发现不连续或顺序错误，先修正后再输出。');
-      constraints.push('示例链接禁用要求：严禁使用 example.com、test.com、your-site.com、localhost 等示例或占位链接；若无法提供真实可访问链接，必须删除该来源条目。');
-      constraints.push('无真实链接剔除要求：任何来源条目如果不包含真实可访问 URL，必须整条删除，且正文不得保留对应编号引用。');
-      constraints.push('真实性要求：禁止编造不存在的来源；若某处缺乏可靠依据，宁可不写具体数字，也不要虚构引用。');
-      constraints.push('链接可靠性要求：来源真实性或权威性无法确认时，必须直接剔除该来源，不得在正文或参考资料中保留占位标签与提示性说明。');
-      constraints.push('数据时效性要求：优先使用最新可获得的数据与报告（同类信息优先选择发布日期更新者）；禁止使用明显过时的数据充当现状依据。');
+      constraints.push(l(
+        '数据与案例支撑要求：文中涉及关键结论、数据或案例时，必须在对应句子后插入来源标注，使用 [1]、[2] 这类编号引用。',
+        'Evidence: when stating key claims, numbers, or cases, add citations using [1], [2], ...'
+      ));
+      constraints.push(l(
+        '引用来源要求：优先引用可公开检索的统计公报、政府/机构官网、学术论文或权威媒体深度文章；引用信息应包含标题与可访问链接（URL）。',
+        'Sources: prefer official reports, academic papers, and reputable publications; each citation must include a title and a reachable URL.'
+      ));
+      constraints.push(l(
+        '文末参考资料要求：新增“## 参考资料”小节，按编号列出每条来源（格式建议：`[1] 标题 - 机构/作者，年份，URL`），并与正文编号一一对应。',
+        'References: add a "## References" section at the end listing each source with matching numbering and URL.'
+      ));
+      constraints.push(l(
+        '引用编号连续性要求：正文引用编号必须从 [1] 开始，按首次出现顺序连续递增；禁止跳号、重号、倒序与越号。',
+        'Numbering: citations must start from [1] and increase sequentially in first-appearance order (no gaps or duplicates).'
+      ));
+      constraints.push(l(
+        '示例链接禁用要求：严禁使用 example.com、test.com、your-site.com、localhost 等示例或占位链接；若无法提供真实可访问链接，必须删除该来源条目。',
+        'No placeholders: do not use example.com/test.com/localhost or any placeholder URLs; remove the source if a real URL is unavailable.'
+      ));
+      constraints.push(l(
+        '真实性要求：禁止编造不存在的来源；若某处缺乏可靠依据，宁可不写具体数字，也不要虚构引用。',
+        'No fabrication: do not invent sources; omit uncertain specifics instead of fabricating citations.'
+      ));
       if (latestEvidence.length > 0) {
-        constraints.push('外部资料使用要求：优先从“MCP最新资料检索结果”中选取来源；列表中的 [E1]...[E6] 仅是候选标识，正文与参考资料必须改用 [1]...[N] 连续编号，不得直接使用 E 编号。');
+        constraints.push(l(
+          '外部资料使用要求：优先从“MCP最新资料检索结果”中选取来源；列表中的 [E1]...[E6] 仅是候选标识，正文与参考资料必须改用 [1]...[N] 连续编号，不得直接使用 E 编号。',
+          'Use evidence: prefer sources from "Latest evidence from search". Replace [E1].. markers with [1].. numbering in the document.'
+        ));
       }
     }
 
     if (enableSignatureDate !== false) {
-      const finalAuthor = authorName?.trim() || 'XXX';
+      const finalAuthor = authorName?.trim() || (isZh ? 'XXX' : 'Your Name');
       let finalDate = documentDate?.trim();
       if (!finalDate) {
         const today = new Date();
-        finalDate = `${today.getFullYear()}年${today.getMonth() + 1}月${today.getDate()}日`;
+        finalDate = isZh
+          ? `${today.getFullYear()}年${today.getMonth() + 1}月${today.getDate()}日`
+          : `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
       }
-      constraints.push(`署名与落款要求：文章结尾必须按以下格式输出署名块，且只出现一次：<div align="right"><p class="signature-line">${finalAuthor}</p><p class="signature-line">${finalDate}</p></div>`);
+      constraints.push(l(
+        `署名与落款要求：文章结尾必须按以下格式输出署名块，且只出现一次：<div align="right"><p class="signature-line">${finalAuthor}</p><p class="signature-line">${finalDate}</p></div>`,
+        `Signature: at the end, output exactly one signature block: <div align="right"><p class="signature-line">${finalAuthor}</p><p class="signature-line">${finalDate}</p></div>`
+      ));
     } else {
-      constraints.push('署名与落款禁用：全文不得出现署名、作者名、报告者姓名与落款日期等结尾信息。');
-      constraints.push('时间信息要求：若必须提及时间，只能引用用户提供材料中可核对的时间信息，禁止臆造具体日期或时间。');
+      constraints.push(l(
+        '署名与落款禁用：全文不得出现署名、作者名、报告者姓名与落款日期等结尾信息。',
+        'No signature: do not include author name or date blocks in the output.'
+      ));
+      constraints.push(l(
+        '时间信息要求：若必须提及时间，只能引用用户提供材料中可核对的时间信息，禁止臆造具体日期或时间。',
+        'Time references: only use dates/times explicitly provided by the user; do not invent specific dates.'
+      ));
     }
 
     if (constraints.length > 0) {
@@ -535,18 +617,32 @@ ${formatInstruction}
     }
 
     if (hasImages) {
-      textPrompt += `\n\n【图片插入指令】：用户上传了 ${images.length} 张图片，你需要分析这些图片的内容，并将它们插入到文档的合适位置。
+      textPrompt += l(
+        `\n\n【图片插入指令】：用户上传了 ${images.length} 张图片，你需要分析这些图片的内容，并将它们插入到文档的合适位置。
 插入图片时，必须使用指定的图片ID作为图片链接（URL），语法为：![图片描述](图片ID)
 例如：![会议照片](${images[0].id})
-请从以下图片中进行选择：\n`;
+请从以下图片中进行选择：\n`,
+        `\n\nImage instructions: the user uploaded ${images.length} image(s). Analyze them and insert them in suitable places.
+You must reference images by their ID using Markdown: ![alt text](IMAGE_ID)
+Example: ![Example image](${images[0].id})
+Available image IDs:\n`
+      );
       images.forEach((img: { id: string, base64: string }, idx: number) => {
-        textPrompt += `- 图片 ${idx + 1} 的ID为：${img.id}\n`;
+        textPrompt += l(`- 图片 ${idx + 1} 的ID为：${img.id}\n`, `- Image ${idx + 1} ID: ${img.id}\n`);
       });
-      textPrompt += `\n注意：
+      textPrompt += l(
+        `\n注意：
 1. 只能使用上述提供的图片ID，绝对不能编造其他图片或使用外部链接。
-2. 绝对不要在文档中使用任何表情符号（Emoji）和图标。`;
+2. 绝对不要在文档中使用任何表情符号（Emoji）和图标。`,
+        `\nNotes:
+1. Only use the provided image IDs. Do not invent images or use external URLs.
+2. Never use emojis or decorative symbols.`
+      );
     } else {
-      textPrompt += `\n\n【重要指令】：绝对不能在文档中使用任何表情符号（Emoji）和图标。`;
+      textPrompt += l(
+        `\n\n【重要指令】：绝对不能在文档中使用任何表情符号（Emoji）和图标。`,
+        `\n\nImportant: Never use emojis or decorative symbols in the document.`
+      );
     }
 
     const userContent: Record<string, unknown>[] = [
@@ -635,7 +731,7 @@ ${formatInstruction}
         } catch (streamError) {
           console.error('Stream Error:', streamError);
           if (!hasOutput) {
-            controller.enqueue(new TextEncoder().encode('生成过程中出现网络波动，请重试。'));
+            controller.enqueue(new TextEncoder().encode(l('生成过程中出现网络波动，请重试。', 'A network error occurred during generation. Please retry.')));
           }
         } finally {
           controller.close();
@@ -668,22 +764,31 @@ ${formatInstruction}
     trackAdminEvent({
       type: 'generate',
       status: 'error',
-      errorMessage: err.message?.slice(0, 200) || '生成失败',
+      errorMessage: err.message?.slice(0, 200) || l('生成失败', 'Request failed'),
     });
     
-    let errorMsg = err.message || '生成失败';
+    let errorMsg = err.message || l('生成失败', 'Request failed');
     if (errorMsg.includes('Failed to fetch') || errorMsg.includes('NetworkError')) {
-      errorMsg = '网络连接异常，请检查您的网络设置（若使用移动网络，请尝试切换至 WiFi 或关闭代理）。';
+      errorMsg = l(
+        '网络连接异常，请检查您的网络设置（若使用移动网络，请尝试切换至 WiFi 或关闭代理）。',
+        'Network error. Please check your connection and try again.'
+      );
     } else if (errorMsg.includes('timeout') || errorMsg.includes('Timeout')) {
-      errorMsg = 'AI 思考时间过长，响应超时，请尝试精简要求或稍后再试。';
+      errorMsg = l(
+        'AI 思考时间过长，响应超时，请尝试精简要求或稍后再试。',
+        'The request timed out. Please simplify the prompt and try again.'
+      );
     } else if (errorMsg.includes('ReadableStream not supported')) {
-      errorMsg = '您的浏览器版本过低，不支持流式生成，请升级浏览器。';
+      errorMsg = l(
+        '您的浏览器版本过低，不支持流式生成，请升级浏览器。',
+        'Your browser does not support streaming responses. Please upgrade your browser.'
+      );
     } else if (errorMsg.includes('balance') || errorMsg.includes('insufficient_quota') || errorMsg.includes('arrears') || errorMsg.includes('1004')) {
-      errorMsg = '个人运营者的上游模型余额不足，请联系运营者充值。';
+      errorMsg = l('服务额度不足，请稍后再试。', 'Service quota exceeded. Please try again later.');
     } else if (errorMsg.includes('rate_limit') || errorMsg.includes('429')) {
-      errorMsg = '当前访问人数过多，请求速率已达上限，请稍后重试。';
+      errorMsg = l('当前访问人数过多，请稍后重试。', 'Too many requests. Please try again later.');
     } else if (errorMsg.includes('401') || errorMsg.includes('Invalid Authentication') || errorMsg.includes('invalid_api_key') || errorMsg.includes('unauthorized')) {
-      errorMsg = 'API 密钥无效或未配置 (401 Unauthorized)。请联系运营者检查后台 API Key 设置是否正确。';
+      errorMsg = l('API 密钥无效或未配置 (401 Unauthorized)。', 'API key is invalid or missing (401 Unauthorized).');
     }
 
     return NextResponse.json({ error: errorMsg }, { status: 500 });
