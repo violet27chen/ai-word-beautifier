@@ -95,6 +95,7 @@ type MermaidRenderer = {
 };
 
 let mermaidLoaderPromise: Promise<MermaidRenderer> | null = null;
+let mermaidPreviewInitialized = false;
 
 function loadMermaid(): Promise<MermaidRenderer> {
   if (typeof window === 'undefined') {
@@ -109,22 +110,7 @@ function loadMermaid(): Promise<MermaidRenderer> {
       if (!mermaid?.initialize || !mermaid?.render) {
         throw new Error('Mermaid module is unavailable');
       }
-      return mermaid;
-    });
-  return mermaidLoaderPromise;
-}
-
-function MermaidDiagram({ code, locale }: { code: string; locale: Locale }) {
-  const [svg, setSvg] = useState('');
-  const [renderError, setRenderError] = useState('');
-  const chartCode = code.trim();
-
-  useEffect(() => {
-    if (!chartCode) return;
-    let active = true;
-    const renderMermaid = async () => {
-      try {
-        const mermaid = await loadMermaid();
+      if (!mermaidPreviewInitialized) {
         mermaid.initialize({
           startOnLoad: false,
           securityLevel: 'loose',
@@ -133,16 +119,45 @@ function MermaidDiagram({ code, locale }: { code: string; locale: Locale }) {
             useMaxWidth: false,
           },
         });
+        mermaidPreviewInitialized = true;
+      }
+      return mermaid;
+    });
+  return mermaidLoaderPromise;
+}
+
+function useDebouncedValue<T>(value: T, delayMs: number) {
+  const [debounced, setDebounced] = useState(value);
+  useEffect(() => {
+    const timer = window.setTimeout(() => setDebounced(value), delayMs);
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [value, delayMs]);
+  return debounced;
+}
+
+function MermaidDiagram({ code, locale }: { code: string; locale: Locale }) {
+  const [svg, setSvg] = useState('');
+  const [renderError, setRenderError] = useState('');
+  const chartCode = code.trim();
+  const debouncedChartCode = useDebouncedValue(chartCode, 350);
+
+  useEffect(() => {
+    if (!debouncedChartCode) return;
+    let active = true;
+    const renderMermaid = async () => {
+      try {
+        const mermaid = await loadMermaid();
         const uuid = typeof crypto !== 'undefined' && 'randomUUID' in crypto
           ? crypto.randomUUID()
           : Math.random().toString(36).slice(2);
-        const { svg: renderedSvg } = await mermaid.render(`mermaid-${uuid}`, chartCode);
+        const { svg: renderedSvg } = await mermaid.render(`mermaid-${uuid}`, debouncedChartCode);
         if (!active) return;
         setSvg(renderedSvg);
         setRenderError('');
       } catch {
         if (!active) return;
-        setSvg('');
         setRenderError(locale === 'zh' ? '图示渲染失败，请检查 Mermaid 语法后重试。' : 'Failed to render the diagram. Please check the Mermaid syntax and try again.');
       }
     };
@@ -150,7 +165,7 @@ function MermaidDiagram({ code, locale }: { code: string; locale: Locale }) {
     return () => {
       active = false;
     };
-  }, [chartCode, locale]);
+  }, [debouncedChartCode, locale]);
 
   if (!chartCode) {
     return null;
