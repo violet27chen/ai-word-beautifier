@@ -14,7 +14,7 @@ type Locale = 'en' | 'zh';
 
 const LOCALE_STORAGE_KEY = '__app_locale__';
 
-function resolveInitialLocale(): Locale {
+function resolvePreferredLocale(): Locale {
   if (typeof window === 'undefined') return 'en';
   const saved = window.localStorage.getItem(LOCALE_STORAGE_KEY);
   if (saved === 'en' || saved === 'zh') return saved;
@@ -97,7 +97,7 @@ let mermaidLoaderPromise: Promise<MermaidRenderer> | null = null;
 
 function loadMermaid(): Promise<MermaidRenderer> {
   if (typeof window === 'undefined') {
-    return Promise.reject(new Error('Mermaid 仅可在浏览器中使用'));
+    return Promise.reject(new Error('Mermaid can only be used in the browser'));
   }
   if (mermaidLoaderPromise) {
     return mermaidLoaderPromise;
@@ -106,15 +106,14 @@ function loadMermaid(): Promise<MermaidRenderer> {
     .then((module) => {
       const mermaid = (module.default || module) as unknown as MermaidRenderer;
       if (!mermaid?.initialize || !mermaid?.render) {
-        throw new Error('Mermaid 模块不可用');
+        throw new Error('Mermaid module is unavailable');
       }
       return mermaid;
     });
   return mermaidLoaderPromise;
 }
 
-function MermaidDiagram({ code }: { code: string }) {
-  const [locale] = useState<Locale>(() => resolveInitialLocale());
+function MermaidDiagram({ code, locale }: { code: string; locale: Locale }) {
   const [svg, setSvg] = useState('');
   const [renderError, setRenderError] = useState('');
   const chartCode = code.trim();
@@ -170,7 +169,7 @@ function getMammoth() {
 }
 
 export default function Home() {
-  const [locale, setLocale] = useState<Locale>(() => resolveInitialLocale());
+  const [locale, setLocale] = useState<Locale>('en');
   const [prompt, setPrompt] = useState('');
   const [content, setContent] = useState('');
   const [model, setModel] = useState(() => {
@@ -235,6 +234,10 @@ export default function Home() {
   const [documentDate, setDocumentDate] = useState('');
   const [refinePrompt, setRefinePrompt] = useState('');
   const [diagramMode, setDiagramMode] = useState('none');
+
+  useEffect(() => {
+    setLocale(resolvePreferredLocale());
+  }, []);
 
   useEffect(() => {
     window.localStorage.setItem(LOCALE_STORAGE_KEY, locale);
@@ -1078,10 +1081,10 @@ export default function Home() {
             ? codeNode.props.children.join('')
             : String(codeNode.props.children ?? '');
           if (className.includes('language-mermaid')) {
-            return <MermaidDiagram code={codeContent} />;
+            return <MermaidDiagram code={codeContent} locale={locale} />;
           }
           if (/^mermaid\s*\n/i.test(codeContent)) {
-            return <MermaidDiagram code={codeContent.replace(/^mermaid\s*\n/i, '')} />;
+            return <MermaidDiagram code={codeContent.replace(/^mermaid\s*\n/i, '')} locale={locale} />;
           }
         }
         return <pre {...props}>{children}</pre>;
@@ -1123,9 +1126,6 @@ export default function Home() {
               >
                 中文
               </button>
-            </div>
-            <div className="px-3 py-1 rounded-full bg-indigo-50 border border-indigo-200 text-indigo-700 text-sm font-semibold hidden md:block">
-              {text('badgeBeta')}
             </div>
           </div>
         </div>
