@@ -496,36 +496,36 @@ export default function Home() {
     ];
 
   const defaultPreset = locale === 'zh'
-    ? '你将收到用户输入的一段简短内容（几句话或要点）。请将它扩写并排版为一份结构清晰、格式专业、可直接导出为 Word 的文档：\n- 使用分层标题（##/###）与列表\n- 适度加粗重点\n- 语气专业、逻辑清晰\n- 不要把整篇内容包进 ```markdown/```html 代码块'
-    : 'You will receive a short user input (a few sentences or bullet points). Expand it and format it into a clean, professional, Word-ready document:\n- Use headings (##/###) and lists\n- Bold key points when helpful\n- Keep tone professional and clear\n- Do not wrap the whole answer in ```markdown/```html code fences';
+    ? '你将收到用户输入的一段简短内容，可能是：\n- 一句话需求（例如“写一篇关于 XXX 的文章”）\n- 几句描述或要点\n请将其扩写并排版为一份结构清晰、格式专业、可直接导出为 Word 的文档：\n- 使用分层标题（##/###）与列表\n- 适度加粗重点\n- 语气专业、逻辑清晰\n- 不要把整篇内容包进 ```markdown/```html 代码块'
+    : 'You will receive a short user input, such as:\n- A one-line request (e.g. “Write an article about X”)\n- A short paragraph or bullet points\nExpand it and format it into a clean, professional, Word-ready document:\n- Use headings (##/###) and lists\n- Bold key points when helpful\n- Keep tone professional and clear\n- Do not wrap the whole answer in ```markdown/```html code fences';
 
   const templates = locale === 'zh'
     ? [
       {
         title: '整理成报告',
         description: '几句话/要点 → 结构化报告（含标题、要点与总结）。',
-        seed: '主题：智能手机的发展\n要点：\n- 起源：大哥大、IBM Simon、Palm/黑莓\n- 关键变革：iOS/Android、芯片、屏幕与影像\n- 现代场景：支付、社交、AI 助手、物联网\n- 趋势：折叠屏、卫星通信、隐私监管、可持续',
+        seed: '写一篇关于“智能手机的发展”的报告文章，包含发展阶段、关键里程碑、现状与未来趋势，结构清晰并可导出为 Word。',
         preset: '请把用户输入扩写并排版成一份报告，结构包含：概述、发展阶段（按时间线）、关键里程碑、现状与应用场景、未来趋势与挑战、总结。要求条理清晰、可读性强。',
         diagramMode: 'mindmap',
       },
       {
         title: '会议纪要',
         description: '把零散记录整理为摘要/决策/行动项。',
-        seed: '会议：产品需求评审\n要点：\n- 目标：5 月上线 MVP\n- 决策：先做登录+付费墙\n- 风险：模型成本、合规\n- 下一步：UI 走查、埋点方案',
+        seed: '写一份“产品需求评审”会议纪要：目标是 5 月上线 MVP；决策先做登录+付费墙；风险包括模型成本与合规；下一步 UI 走查与埋点方案。',
         preset: '请把用户输入整理为会议纪要，输出：会议摘要、关键决策、行动项（负责人/截止时间如未提供则留空）、风险与待确认问题。',
         diagramMode: 'none',
       },
       {
         title: '项目提案',
         description: '快速生成可落地的方案/计划/风险。',
-        seed: '想做一个面向海外用户的文档排版工具站：输入短内容自动变成 Word；支持模板、图片理解、导出 .docx。',
+        seed: '写一个项目提案：做一个面向海外用户的文档排版工具站，用户输入一句话就能生成结构清晰的 Word 文档；支持模板、图片理解与 .docx 导出。',
         preset: '请把用户输入扩写成项目提案，结构：背景/问题、目标、方案设计、实施计划（里程碑）、资源与预算（估算即可）、风险与对策、结论与下一步。',
         diagramMode: 'flowchart',
       },
       {
         title: '一页简报',
         description: '快速输出可分享的一页式 Brief。',
-        seed: '主题：为 Shopify 商家做一个 AI 客服助手\n受众：产品/业务团队\n重点：价值、范围、指标、里程碑',
+        seed: '写一份一页简报：为 Shopify 商家做一个 AI 客服助手；受众是产品/业务团队；重点包括价值、范围、指标与里程碑。',
         preset: '请把用户输入扩写成一页简报，结构：Overview、Context、Key points、Recommendations、Next steps。要求简洁、有可执行的下一步。',
         diagramMode: 'none',
       },
@@ -534,28 +534,28 @@ export default function Home() {
       {
         title: 'Polish into a report',
         description: 'Short notes → a structured report with headings and summary.',
-        seed: 'Topic: The evolution of smartphones\nNotes:\n- Early era: brick phones, IBM Simon, Palm/BlackBerry\n- Big shifts: iOS/Android, chips, screens, cameras\n- Today: payments, social, AI assistants, IoT\n- What’s next: foldables, satellite connectivity, privacy regulation, sustainability',
+        seed: 'Write a report about “The evolution of smartphones”, covering key stages, milestones, today’s use cases, and future trends. Make it Word-ready.',
         preset: 'Expand the user input into a report with: Overview, Timeline (stages), Key milestones, Today’s use cases, Future trends & challenges, Summary. Keep it professional and Word-ready.',
         diagramMode: 'mindmap',
       },
       {
         title: 'Meeting notes',
         description: 'Turn rough notes into decisions and action items.',
-        seed: 'Meeting: Product requirements review\nNotes:\n- Goal: ship MVP in May\n- Decision: start with auth + paywall\n- Risks: model cost, compliance\n- Next: UI review, analytics plan',
+        seed: 'Create meeting notes for a “Product requirements review” meeting: goal is to ship MVP in May; decision is to start with auth + paywall; risks include model cost and compliance; next steps are UI review and an analytics plan.',
         preset: 'Convert the user input into: Executive summary, Key decisions, Action items (owner / due date if available), Open questions & risks.',
         diagramMode: 'none',
       },
       {
         title: 'Project proposal',
         description: 'A practical proposal with plan and risks.',
-        seed: 'Idea: A global document formatting tool. Users paste short notes and export polished Word docs. Include templates, optional images, and .docx export.',
+        seed: 'Write a project proposal for a global document formatting tool where users can type one sentence and export a polished Word doc. Include templates, optional images, and .docx export.',
         preset: 'Write a project proposal with: Background, Goals, Proposed solution, Implementation plan (milestones), Resources & budget (estimates), Risks & mitigations, Conclusion & next steps.',
         diagramMode: 'flowchart',
       },
       {
         title: 'One-page brief',
         description: 'A concise brief you can share instantly.',
-        seed: 'Topic: AI customer support assistant for Shopify stores\nAudience: product & business team\nFocus: value, scope, metrics, milestones',
+        seed: 'Write a one-page brief for an “AI customer support assistant for Shopify stores”. Audience: product & business team. Focus on value, scope, metrics, and milestones.',
         preset: 'Create a one-page brief with: Overview, Context, Key points, Recommendations, Next steps. Keep it crisp and actionable.',
         diagramMode: 'none',
       },
