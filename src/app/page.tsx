@@ -24,31 +24,32 @@ function resolvePreferredLocale(): Locale {
 
 type ModelOption = {
   value: string;
-  label: string;
+  labelEn: string;
+  labelZh: string;
   supportsImage: boolean;
 };
 
 const MODELS: ModelOption[] = [
-  { value: 'deepseek-v4-flash', label: 'DeepSeek-V4-Flash (默认)', supportsImage: false },
-  { value: 'deepseek-v4-pro', label: 'DeepSeek-V4-Pro', supportsImage: false },
-  { value: 'mimo-v2.5-pro', label: 'MiMo-v2.5-pro (小米)', supportsImage: false },
-  { value: 'mimo-v2-pro', label: 'MiMo-v2-pro (小米)', supportsImage: false },
-  { value: 'mimo-v2.5', label: 'MiMo-v2.5 (小米)', supportsImage: true },
-  { value: 'mimo-v2-omni', label: 'MiMo-Omni (全模态，小米)', supportsImage: true },
-  { value: 'mimo-v2-flash', label: 'MiMo-v2-flash (小米)', supportsImage: false },
-  { value: 'kimi-k2.6', label: 'Kimi-K2.6 (多模态)', supportsImage: true },
-  { value: 'kimi-k2.5', label: 'Kimi-K2.5 (多模态)', supportsImage: true },
-  { value: 'moonshot-v1-8k', label: 'Moonshot-v1-8k', supportsImage: false },
-  { value: 'moonshot-v1-32k', label: 'Moonshot-v1-32k', supportsImage: false },
-  { value: 'moonshot-v1-128k', label: 'Moonshot-v1-128k', supportsImage: false },
-  { value: 'moonshot-v1-8k-vision-preview', label: 'Moonshot-v1-8k-vision-preview (视觉)', supportsImage: true },
-  { value: 'moonshot-v1-32k-vision-preview', label: 'Moonshot-v1-32k-vision-preview (视觉)', supportsImage: true },
-  { value: 'moonshot-v1-128k-vision-preview', label: 'Moonshot-v1-128k-vision-preview (视觉)', supportsImage: true },
-  { value: 'glm-4.7', label: 'GLM-4.7 高智能模型', supportsImage: false },
-  { value: 'glm-5.1', label: 'GLM-5.1 最新旗舰', supportsImage: false },
-  { value: 'glm-5v-turbo', label: 'GLM-5V-Turbo (多模态)', supportsImage: true },
-  { value: 'qwen3.5-flash', label: 'Qwen3.5-Flash (阿里云百炼)', supportsImage: false },
-  { value: 'doubao-seed-1-6-flash-250828', label: 'Doubao-Seed-1.6-Flash (豆包多模态)', supportsImage: true },
+  { value: 'deepseek-v4-flash', labelEn: 'DeepSeek V4 Flash (Default)', labelZh: 'DeepSeek-V4-Flash (默认)', supportsImage: false },
+  { value: 'deepseek-v4-pro', labelEn: 'DeepSeek V4 Pro', labelZh: 'DeepSeek-V4-Pro', supportsImage: false },
+  { value: 'mimo-v2.5-pro', labelEn: 'MiMo v2.5 Pro (Xiaomi)', labelZh: 'MiMo-v2.5-pro (小米)', supportsImage: false },
+  { value: 'mimo-v2-pro', labelEn: 'MiMo v2 Pro (Xiaomi)', labelZh: 'MiMo-v2-pro (小米)', supportsImage: false },
+  { value: 'mimo-v2.5', labelEn: 'MiMo v2.5 (Xiaomi)', labelZh: 'MiMo-v2.5 (小米)', supportsImage: true },
+  { value: 'mimo-v2-omni', labelEn: 'MiMo Omni (Xiaomi)', labelZh: 'MiMo-Omni (全模态，小米)', supportsImage: true },
+  { value: 'mimo-v2-flash', labelEn: 'MiMo v2 Flash (Xiaomi)', labelZh: 'MiMo-v2-flash (小米)', supportsImage: false },
+  { value: 'kimi-k2.6', labelEn: 'Kimi K2.6 (Multimodal)', labelZh: 'Kimi-K2.6 (多模态)', supportsImage: true },
+  { value: 'kimi-k2.5', labelEn: 'Kimi K2.5 (Multimodal)', labelZh: 'Kimi-K2.5 (多模态)', supportsImage: true },
+  { value: 'moonshot-v1-8k', labelEn: 'Moonshot v1 8k', labelZh: 'Moonshot-v1-8k', supportsImage: false },
+  { value: 'moonshot-v1-32k', labelEn: 'Moonshot v1 32k', labelZh: 'Moonshot-v1-32k', supportsImage: false },
+  { value: 'moonshot-v1-128k', labelEn: 'Moonshot v1 128k', labelZh: 'Moonshot-v1-128k', supportsImage: false },
+  { value: 'moonshot-v1-8k-vision-preview', labelEn: 'Moonshot v1 8k (Vision)', labelZh: 'Moonshot-v1-8k-vision-preview (视觉)', supportsImage: true },
+  { value: 'moonshot-v1-32k-vision-preview', labelEn: 'Moonshot v1 32k (Vision)', labelZh: 'Moonshot-v1-32k-vision-preview (视觉)', supportsImage: true },
+  { value: 'moonshot-v1-128k-vision-preview', labelEn: 'Moonshot v1 128k (Vision)', labelZh: 'Moonshot-v1-128k-vision-preview (视觉)', supportsImage: true },
+  { value: 'glm-4.7', labelEn: 'GLM 4.7', labelZh: 'GLM-4.7 高智能模型', supportsImage: false },
+  { value: 'glm-5.1', labelEn: 'GLM 5.1', labelZh: 'GLM-5.1 最新旗舰', supportsImage: false },
+  { value: 'glm-5v-turbo', labelEn: 'GLM 5V Turbo (Multimodal)', labelZh: 'GLM-5V-Turbo (多模态)', supportsImage: true },
+  { value: 'qwen3.5-flash', labelEn: 'Qwen 3.5 Flash', labelZh: 'Qwen3.5-Flash (阿里云百炼)', supportsImage: false },
+  { value: 'doubao-seed-1-6-flash-250828', labelEn: 'Doubao Seed 1.6 Flash (Multimodal)', labelZh: 'Doubao-Seed-1.6-Flash (豆包多模态)', supportsImage: true },
 ];
 
 const WRITING_STYLES = [
@@ -132,7 +133,10 @@ function MermaidDiagram({ code, locale }: { code: string; locale: Locale }) {
             useMaxWidth: false,
           },
         });
-        const { svg: renderedSvg } = await mermaid.render(`mermaid-${crypto.randomUUID()}`, chartCode);
+        const uuid = typeof crypto !== 'undefined' && 'randomUUID' in crypto
+          ? crypto.randomUUID()
+          : Math.random().toString(36).slice(2);
+        const { svg: renderedSvg } = await mermaid.render(`mermaid-${uuid}`, chartCode);
         if (!active) return;
         setSvg(renderedSvg);
         setRenderError('');
@@ -989,9 +993,12 @@ export default function Home() {
         result += match[0];
       } else {
         const renderCode = `%%{init: {'securityLevel': 'strict', 'theme': 'default', 'flowchart': {'htmlLabels': false, 'useMaxWidth': false}}}%%\n${graphCode}`;
-        const { svg } = await mermaid.render(`mermaid-download-${crypto.randomUUID()}-${blockNo}`, renderCode);
+        const uuid = typeof crypto !== 'undefined' && 'randomUUID' in crypto
+          ? crypto.randomUUID()
+          : Math.random().toString(36).slice(2);
+        const { svg } = await mermaid.render(`mermaid-download-${uuid}-${blockNo}`, renderCode);
         const pngDataUrl = await svgToPngDataUrl(svg);
-        result += `![流程图${blockNo}](${pngDataUrl})`;
+        result += `![${locale === 'zh' ? '流程图' : 'Diagram'}${blockNo}](${pngDataUrl})`;
       }
       lastIndex = codeBlockRegex.lastIndex;
       blockNo += 1;
@@ -1311,7 +1318,7 @@ export default function Home() {
                 >
                   {visibleModels.map((m) => (
                     <option key={m.value} value={m.value}>
-                      {m.label}{m.supportsImage ? (locale === 'zh' ? ' · 支持图片' : ' · Vision') : (locale === 'zh' ? ' · 仅文本' : ' · Text')}
+                      {(locale === 'zh' ? m.labelZh : m.labelEn)}{m.supportsImage ? (locale === 'zh' ? ' · 支持图片' : ' · Vision') : (locale === 'zh' ? ' · 仅文本' : ' · Text')}
                     </option>
                   ))}
                 </select>
