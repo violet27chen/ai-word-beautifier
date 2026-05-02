@@ -14,7 +14,7 @@ type Locale = 'en' | 'zh';
 
 const LOCALE_STORAGE_KEY = '__app_locale__';
 
-function resolveInitialLocale(): Locale {
+function resolvePreferredLocale(): Locale {
   if (typeof window === 'undefined') return 'en';
   const saved = window.localStorage.getItem(LOCALE_STORAGE_KEY);
   if (saved === 'en' || saved === 'zh') return saved;
@@ -24,31 +24,32 @@ function resolveInitialLocale(): Locale {
 
 type ModelOption = {
   value: string;
-  label: string;
+  labelEn: string;
+  labelZh: string;
   supportsImage: boolean;
 };
 
 const MODELS: ModelOption[] = [
-  { value: 'deepseek-v4-flash', label: 'DeepSeek-V4-Flash (默认)', supportsImage: false },
-  { value: 'deepseek-v4-pro', label: 'DeepSeek-V4-Pro', supportsImage: false },
-  { value: 'mimo-v2.5-pro', label: 'MiMo-v2.5-pro (小米)', supportsImage: false },
-  { value: 'mimo-v2-pro', label: 'MiMo-v2-pro (小米)', supportsImage: false },
-  { value: 'mimo-v2.5', label: 'MiMo-v2.5 (小米)', supportsImage: true },
-  { value: 'mimo-v2-omni', label: 'MiMo-Omni (全模态，小米)', supportsImage: true },
-  { value: 'mimo-v2-flash', label: 'MiMo-v2-flash (小米)', supportsImage: false },
-  { value: 'kimi-k2.6', label: 'Kimi-K2.6 (多模态)', supportsImage: true },
-  { value: 'kimi-k2.5', label: 'Kimi-K2.5 (多模态)', supportsImage: true },
-  { value: 'moonshot-v1-8k', label: 'Moonshot-v1-8k', supportsImage: false },
-  { value: 'moonshot-v1-32k', label: 'Moonshot-v1-32k', supportsImage: false },
-  { value: 'moonshot-v1-128k', label: 'Moonshot-v1-128k', supportsImage: false },
-  { value: 'moonshot-v1-8k-vision-preview', label: 'Moonshot-v1-8k-vision-preview (视觉)', supportsImage: true },
-  { value: 'moonshot-v1-32k-vision-preview', label: 'Moonshot-v1-32k-vision-preview (视觉)', supportsImage: true },
-  { value: 'moonshot-v1-128k-vision-preview', label: 'Moonshot-v1-128k-vision-preview (视觉)', supportsImage: true },
-  { value: 'glm-4.7', label: 'GLM-4.7 高智能模型', supportsImage: false },
-  { value: 'glm-5.1', label: 'GLM-5.1 最新旗舰', supportsImage: false },
-  { value: 'glm-5v-turbo', label: 'GLM-5V-Turbo (多模态)', supportsImage: true },
-  { value: 'qwen3.5-flash', label: 'Qwen3.5-Flash (阿里云百炼)', supportsImage: false },
-  { value: 'doubao-seed-1-6-flash-250828', label: 'Doubao-Seed-1.6-Flash (豆包多模态)', supportsImage: true },
+  { value: 'deepseek-v4-flash', labelEn: 'DeepSeek V4 Flash (Default)', labelZh: 'DeepSeek-V4-Flash (默认)', supportsImage: false },
+  { value: 'deepseek-v4-pro', labelEn: 'DeepSeek V4 Pro', labelZh: 'DeepSeek-V4-Pro', supportsImage: false },
+  { value: 'mimo-v2.5-pro', labelEn: 'MiMo v2.5 Pro (Xiaomi)', labelZh: 'MiMo-v2.5-pro (小米)', supportsImage: false },
+  { value: 'mimo-v2-pro', labelEn: 'MiMo v2 Pro (Xiaomi)', labelZh: 'MiMo-v2-pro (小米)', supportsImage: false },
+  { value: 'mimo-v2.5', labelEn: 'MiMo v2.5 (Xiaomi)', labelZh: 'MiMo-v2.5 (小米)', supportsImage: true },
+  { value: 'mimo-v2-omni', labelEn: 'MiMo Omni (Xiaomi)', labelZh: 'MiMo-Omni (全模态，小米)', supportsImage: true },
+  { value: 'mimo-v2-flash', labelEn: 'MiMo v2 Flash (Xiaomi)', labelZh: 'MiMo-v2-flash (小米)', supportsImage: false },
+  { value: 'kimi-k2.6', labelEn: 'Kimi K2.6 (Multimodal)', labelZh: 'Kimi-K2.6 (多模态)', supportsImage: true },
+  { value: 'kimi-k2.5', labelEn: 'Kimi K2.5 (Multimodal)', labelZh: 'Kimi-K2.5 (多模态)', supportsImage: true },
+  { value: 'moonshot-v1-8k', labelEn: 'Moonshot v1 8k', labelZh: 'Moonshot-v1-8k', supportsImage: false },
+  { value: 'moonshot-v1-32k', labelEn: 'Moonshot v1 32k', labelZh: 'Moonshot-v1-32k', supportsImage: false },
+  { value: 'moonshot-v1-128k', labelEn: 'Moonshot v1 128k', labelZh: 'Moonshot-v1-128k', supportsImage: false },
+  { value: 'moonshot-v1-8k-vision-preview', labelEn: 'Moonshot v1 8k (Vision)', labelZh: 'Moonshot-v1-8k-vision-preview (视觉)', supportsImage: true },
+  { value: 'moonshot-v1-32k-vision-preview', labelEn: 'Moonshot v1 32k (Vision)', labelZh: 'Moonshot-v1-32k-vision-preview (视觉)', supportsImage: true },
+  { value: 'moonshot-v1-128k-vision-preview', labelEn: 'Moonshot v1 128k (Vision)', labelZh: 'Moonshot-v1-128k-vision-preview (视觉)', supportsImage: true },
+  { value: 'glm-4.7', labelEn: 'GLM 4.7', labelZh: 'GLM-4.7 高智能模型', supportsImage: false },
+  { value: 'glm-5.1', labelEn: 'GLM 5.1', labelZh: 'GLM-5.1 最新旗舰', supportsImage: false },
+  { value: 'glm-5v-turbo', labelEn: 'GLM 5V Turbo (Multimodal)', labelZh: 'GLM-5V-Turbo (多模态)', supportsImage: true },
+  { value: 'qwen3.5-flash', labelEn: 'Qwen 3.5 Flash', labelZh: 'Qwen3.5-Flash (阿里云百炼)', supportsImage: false },
+  { value: 'doubao-seed-1-6-flash-250828', labelEn: 'Doubao Seed 1.6 Flash (Multimodal)', labelZh: 'Doubao-Seed-1.6-Flash (豆包多模态)', supportsImage: true },
 ];
 
 const WRITING_STYLES = [
@@ -97,7 +98,7 @@ let mermaidLoaderPromise: Promise<MermaidRenderer> | null = null;
 
 function loadMermaid(): Promise<MermaidRenderer> {
   if (typeof window === 'undefined') {
-    return Promise.reject(new Error('Mermaid 仅可在浏览器中使用'));
+    return Promise.reject(new Error('Mermaid can only be used in the browser'));
   }
   if (mermaidLoaderPromise) {
     return mermaidLoaderPromise;
@@ -106,15 +107,14 @@ function loadMermaid(): Promise<MermaidRenderer> {
     .then((module) => {
       const mermaid = (module.default || module) as unknown as MermaidRenderer;
       if (!mermaid?.initialize || !mermaid?.render) {
-        throw new Error('Mermaid 模块不可用');
+        throw new Error('Mermaid module is unavailable');
       }
       return mermaid;
     });
   return mermaidLoaderPromise;
 }
 
-function MermaidDiagram({ code }: { code: string }) {
-  const [locale] = useState<Locale>(() => resolveInitialLocale());
+function MermaidDiagram({ code, locale }: { code: string; locale: Locale }) {
   const [svg, setSvg] = useState('');
   const [renderError, setRenderError] = useState('');
   const chartCode = code.trim();
@@ -133,7 +133,10 @@ function MermaidDiagram({ code }: { code: string }) {
             useMaxWidth: false,
           },
         });
-        const { svg: renderedSvg } = await mermaid.render(`mermaid-${crypto.randomUUID()}`, chartCode);
+        const uuid = typeof crypto !== 'undefined' && 'randomUUID' in crypto
+          ? crypto.randomUUID()
+          : Math.random().toString(36).slice(2);
+        const { svg: renderedSvg } = await mermaid.render(`mermaid-${uuid}`, chartCode);
         if (!active) return;
         setSvg(renderedSvg);
         setRenderError('');
@@ -170,7 +173,7 @@ function getMammoth() {
 }
 
 export default function Home() {
-  const [locale, setLocale] = useState<Locale>(() => resolveInitialLocale());
+  const [locale, setLocale] = useState<Locale>('en');
   const [prompt, setPrompt] = useState('');
   const [content, setContent] = useState('');
   const [model, setModel] = useState(() => {
@@ -235,6 +238,10 @@ export default function Home() {
   const [documentDate, setDocumentDate] = useState('');
   const [refinePrompt, setRefinePrompt] = useState('');
   const [diagramMode, setDiagramMode] = useState('none');
+
+  useEffect(() => {
+    setLocale(resolvePreferredLocale());
+  }, []);
 
   useEffect(() => {
     window.localStorage.setItem(LOCALE_STORAGE_KEY, locale);
@@ -986,9 +993,12 @@ export default function Home() {
         result += match[0];
       } else {
         const renderCode = `%%{init: {'securityLevel': 'strict', 'theme': 'default', 'flowchart': {'htmlLabels': false, 'useMaxWidth': false}}}%%\n${graphCode}`;
-        const { svg } = await mermaid.render(`mermaid-download-${crypto.randomUUID()}-${blockNo}`, renderCode);
+        const uuid = typeof crypto !== 'undefined' && 'randomUUID' in crypto
+          ? crypto.randomUUID()
+          : Math.random().toString(36).slice(2);
+        const { svg } = await mermaid.render(`mermaid-download-${uuid}-${blockNo}`, renderCode);
         const pngDataUrl = await svgToPngDataUrl(svg);
-        result += `![流程图${blockNo}](${pngDataUrl})`;
+        result += `![${locale === 'zh' ? '流程图' : 'Diagram'}${blockNo}](${pngDataUrl})`;
       }
       lastIndex = codeBlockRegex.lastIndex;
       blockNo += 1;
@@ -1078,10 +1088,10 @@ export default function Home() {
             ? codeNode.props.children.join('')
             : String(codeNode.props.children ?? '');
           if (className.includes('language-mermaid')) {
-            return <MermaidDiagram code={codeContent} />;
+            return <MermaidDiagram code={codeContent} locale={locale} />;
           }
           if (/^mermaid\s*\n/i.test(codeContent)) {
-            return <MermaidDiagram code={codeContent.replace(/^mermaid\s*\n/i, '')} />;
+            return <MermaidDiagram code={codeContent.replace(/^mermaid\s*\n/i, '')} locale={locale} />;
           }
         }
         return <pre {...props}>{children}</pre>;
@@ -1123,9 +1133,6 @@ export default function Home() {
               >
                 中文
               </button>
-            </div>
-            <div className="px-3 py-1 rounded-full bg-indigo-50 border border-indigo-200 text-indigo-700 text-sm font-semibold hidden md:block">
-              {text('badgeBeta')}
             </div>
           </div>
         </div>
@@ -1311,7 +1318,7 @@ export default function Home() {
                 >
                   {visibleModels.map((m) => (
                     <option key={m.value} value={m.value}>
-                      {m.label}{m.supportsImage ? (locale === 'zh' ? ' · 支持图片' : ' · Vision') : (locale === 'zh' ? ' · 仅文本' : ' · Text')}
+                      {(locale === 'zh' ? m.labelZh : m.labelEn)}{m.supportsImage ? (locale === 'zh' ? ' · 支持图片' : ' · Vision') : (locale === 'zh' ? ' · 仅文本' : ' · Text')}
                     </option>
                   ))}
                 </select>

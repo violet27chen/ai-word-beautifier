@@ -525,8 +525,20 @@ No-emoji rule: Never use emojis or decorative symbols anywhere in the output.`;
         'Diagram: insert one Mermaid mind map block in the most suitable position in the middle of the document using ```mermaid ... ```.'
       ));
       constraints.push(l(
-        '思维导图语法要求：必须使用 mindmap 语法，根节点概括主题，至少包含3个一级分支，并保证分支名称与正文要点一致。',
-        'Mind map syntax: use mindmap, include at least 3 top-level branches aligned with the main points.'
+        '思维导图语法要求：必须使用 mindmap 语法，并用缩进表达层级关系（建议每层缩进2个空格）。示例：\n' +
+          'mindmap\n' +
+          '  root((主题))\n' +
+          '    分支1\n' +
+          '      要点A\n' +
+          '    分支2\n' +
+          '      要点B',
+        'Mind map syntax: use mindmap and express hierarchy with indentation (recommend 2 spaces per level). Example:\n' +
+          'mindmap\n' +
+          '  root((Topic))\n' +
+          '    Branch 1\n' +
+          '      Point A\n' +
+          '    Branch 2\n' +
+          '      Point B'
       ));
       constraints.push(l(
         '图示位置要求：图示前后各保留一段解释文字，不要把图示放在文末“参考资料”之后。',
