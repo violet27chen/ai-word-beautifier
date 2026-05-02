@@ -499,7 +499,7 @@ export default function Home() {
     ];
 
   const defaultPreset = locale === 'zh'
-    ? '你将收到用户输入的一段简短内容，可能是：\n- 一句话需求（例如“写一篇关于 XXX 的文章”）\n- 几句描述或要点\n请将其扩写并排版为一份结构清晰、格式专业、可直接导出为 Word 的文档：\n- 使用分层标题（##/###）与列表\n- 适度加粗重点\n- 语气专业、逻辑清晰\n- 不要把整篇内容包进 ```markdown/```html 代码块'
+    ? '你将收到用户输入的一段简短内容，可能是：\n- 一句话需求（例如“写一篇关于 XXX 的文章”）\n- 几句描述或要点\n请将其扩写并排版为一份结构清晰、格式专业、可直接导出为 Word 的文档：\n- 使用分层标题（##/###）与列表\n- 适度加粗重点\n- 语气专业、逻辑清晰\n- 标题与小节名称必须使用用户输入的语言（用户用中文就全中文，不要出现英文小标题）\n- 不要把整篇内容包进 ```markdown/```html 代码块'
     : 'You will receive a short user input, such as:\n- A one-line request (e.g. “Write an article about X”)\n- A short paragraph or bullet points\nExpand it and format it into a clean, professional, Word-ready document:\n- Use headings (##/###) and lists\n- Bold key points when helpful\n- Keep tone professional and clear\n- Do not wrap the whole answer in ```markdown/```html code fences';
 
   const templates = locale === 'zh'
@@ -514,7 +514,7 @@ export default function Home() {
       {
         title: '会议纪要',
         description: '把零散记录整理为摘要/决策/行动项。',
-        seed: '写一份“产品需求评审”会议纪要。\n会议背景：我们要在 5 月上线 MVP；本次评审的核心是范围收敛与上线前准备。\n已达成共识：先上线登录（auth）+ 付费墙；主要风险是模型成本与合规；下一步需要 UI 走查与埋点方案。\n请输出：Executive Summary、Key Decisions、Action Items（表格，Owner/Deadline 可留空）、Open Questions & Risks。',
+        seed: '写一份“产品需求评审”会议纪要。\n会议背景：我们要在 5 月上线 MVP；本次评审的核心是范围收敛与上线前准备。\n已达成共识：先上线登录（auth）+ 付费墙；主要风险是模型成本与合规；下一步需要 UI 走查与埋点方案。\n请用中文标题输出：会议摘要、关键决策、行动项（表格，负责人/截止时间可留空）、风险与待确认问题。',
         preset: '请把用户输入整理为会议纪要，输出：会议摘要、关键决策、行动项（负责人/截止时间如未提供则留空）、风险与待确认问题。',
         diagramMode: 'none',
       },
@@ -529,7 +529,7 @@ export default function Home() {
         title: '一页简报',
         description: '快速输出可分享的一页式 Brief。',
         seed: '写一份一页简报：为 Shopify 商家做一个 AI 客服助手。\n受众：产品与业务团队（需要可执行的决策材料）。\n请覆盖：核心价值（能带来什么）、范围（做什么/不做什么）、关键指标（例如首响时间、解决率、节省人力）、以及 3 个阶段的里程碑（MVP/Beta/GA）。语言简洁但信息密度高。',
-        preset: '请把用户输入扩写成一页简报，结构：Overview、Context、Key points、Recommendations、Next steps。要求简洁、有可执行的下一步。',
+        preset: '请把用户输入扩写成一页简报，结构：概览、背景、要点、建议、下一步。要求简洁、有可执行的下一步。',
         diagramMode: 'none',
       },
     ]
