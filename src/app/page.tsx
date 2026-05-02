@@ -237,6 +237,9 @@ export default function Home() {
   const resultRef = useRef<HTMLDivElement>(null);
   const modalResultRef = useRef<HTMLDivElement>(null);
   const [autoScroll, setAutoScroll] = useState(true);
+  const autoScrollRef = useRef(true);
+  const autoScrollRafRef = useRef<number | null>(null);
+  const autoScrollNextRef = useRef<boolean | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
@@ -631,11 +634,19 @@ export default function Home() {
   }, [displayedMarkdown, isFetching, isTyping, autoScroll]);
 
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
-    const target = e.target as HTMLDivElement;
-    // Check if user scrolled up
-    // Allow a 50px threshold for bottom detection
+    const target = e.currentTarget;
     const isAtBottom = target.scrollHeight - target.scrollTop - target.clientHeight < 50;
-    setAutoScroll(isAtBottom);
+    autoScrollNextRef.current = isAtBottom;
+    if (autoScrollRafRef.current !== null) return;
+    autoScrollRafRef.current = window.requestAnimationFrame(() => {
+      autoScrollRafRef.current = null;
+      const next = autoScrollNextRef.current;
+      autoScrollNextRef.current = null;
+      if (typeof next !== 'boolean') return;
+      if (next === autoScrollRef.current) return;
+      autoScrollRef.current = next;
+      setAutoScroll(next);
+    });
   };
   
   // Typewriter effect interval
@@ -774,6 +785,7 @@ export default function Home() {
     setIsFetching(true);
     setError(null);
     setSuccess(false);
+    autoScrollRef.current = true;
     setAutoScroll(true);
     fullTextRef.current = '';
     setDisplayedMarkdown('');
