@@ -262,7 +262,7 @@ export default function Home() {
       generationSettings: 'Generation Settings',
       chooseModel: 'Model',
       modelHintVisionOnly: 'Images uploaded: only multimodal models are available in the dropdown.',
-      promptLabel: 'Instructions',
+      promptLabel: 'Describe the document you want to create',
       promptPlaceholder: 'Example: Write a project proposal. Keep it professional and well-structured with headings, lists, and a conclusion.',
       contentCardTitle: 'Source Content (Optional)',
       contentFilled: 'Added',
@@ -331,7 +331,7 @@ export default function Home() {
       generationSettings: '生成设置',
       chooseModel: '选择模型',
       modelHintVisionOnly: '已上传图片：下拉框仅显示支持图片理解的多模态模型。',
-      promptLabel: '排版/生成要求',
+      promptLabel: '请输入你需要制作的文档内容',
       promptPlaceholder: '例如：请帮我写一份关于 AI 技术在医疗领域应用的商业计划书，要求排版专业，包含标题、正文、列表和总结...',
       contentCardTitle: '原始内容 (可选)',
       contentFilled: '已填写',
@@ -1175,7 +1175,7 @@ export default function Home() {
   });
 
   return (
-    <div className="h-screen bg-gray-50/50 flex flex-col overflow-hidden">
+    <div className="min-h-screen bg-gray-50/50 flex flex-col">
       {/* Header */}
       <header className="bg-white border-b border-gray-200 shrink-0 z-10">
         <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
@@ -1214,8 +1214,8 @@ export default function Home() {
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 min-h-0 overflow-y-auto lg:overflow-hidden">
-        <div className="max-w-7xl mx-auto px-4 pt-6">
+      <main className="flex-1">
+        <div className="max-w-[1600px] mx-auto px-4 pt-6">
           <div className="bg-white border border-gray-200 rounded-2xl p-6 md:p-8 shadow-sm">
             <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
               <div className="max-w-2xl">
@@ -1230,10 +1230,10 @@ export default function Home() {
             </div>
           </div>
         </div>
-        <div className="max-w-[1600px] mx-auto px-4 py-6 h-full flex flex-col lg:flex-row gap-6">
+        <div className="max-w-[1600px] mx-auto px-4 py-6 flex flex-col lg:flex-row gap-6">
           
           {/* Left Column: Advanced Settings */}
-          <div className="w-full lg:w-[25%] lg:h-full lg:overflow-y-auto lg:pr-2 pb-6 space-y-6 custom-scrollbar">
+          <div className="w-full lg:w-[25%] lg:pr-2 pb-6 space-y-6">
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
               <h2 className="text-lg font-semibold text-gray-800 mb-6 flex items-center gap-2">
                 <SlidersHorizontal className="w-5 h-5 text-indigo-500" />
@@ -1389,7 +1389,7 @@ export default function Home() {
           </div>
 
           {/* Middle Column: Inputs */}
-          <div className="w-full lg:w-[45%] lg:h-full lg:overflow-y-auto lg:pr-2 pb-6 space-y-6 custom-scrollbar">
+          <div className="w-full lg:w-[45%] lg:pr-2 pb-6 space-y-6">
             {/* Settings Card */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <div className="flex items-center gap-2 mb-4 text-gray-800">
@@ -1573,7 +1573,7 @@ export default function Home() {
         </div>
 
           {/* Right Column: Actions & Status */}
-          <div className="w-full lg:w-[40%] lg:h-full lg:overflow-y-auto lg:pr-2 pb-6 flex flex-col custom-scrollbar">
+          <div className="w-full lg:w-[40%] lg:pr-2 pb-6 flex flex-col">
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 flex flex-col min-h-max">
               <h2 className="text-lg font-semibold text-gray-800 mb-4 shrink-0">{locale === 'zh' ? '操作面板' : 'Actions'}</h2>
               
