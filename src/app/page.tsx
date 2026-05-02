@@ -504,12 +504,21 @@ export default function Home() {
     }
   };
 
+  const normalizeMermaidBlocks = (markdown: string) => {
+    if (!markdown) return markdown;
+    return markdown
+      .replace(/^\s*`mermaid\s*\n([\s\S]*?)\n`\s*$/gim, (_, code: string) => `\`\`\`mermaid\n${code.trim()}\n\`\`\``)
+      .replace(/\n\s*`mermaid\s*\n([\s\S]*?)\n`\s*(?=\n)/g, (_, code: string) => `\n\`\`\`mermaid\n${code.trim()}\n\`\`\`\n`);
+  };
+
   const cleanMarkdown = displayedMarkdown
     .replace(/^```(markdown|html)?\n?/i, '')
     .replace(/\n?```$/i, '')
     .replace(/^html\s*\n/i, '');
 
-  const copyFriendlyMarkdown = cleanMarkdown
+  const normalizedMarkdown = normalizeMermaidBlocks(cleanMarkdown);
+
+  const copyFriendlyMarkdown = normalizedMarkdown
     .replace(/<div\s+align=["']center["']>\s*<h1[^>]*>([\s\S]*?)<\/h1>\s*<\/div>/gi, (_, title: string) => `# ${title.replace(/<[^>]+>/g, '').trim()}`)
     .replace(/<h1[^>]*>([\s\S]*?)<\/h1>/gi, (_, title: string) => `# ${title.replace(/<[^>]+>/g, '').trim()}`);
 
@@ -862,7 +871,7 @@ export default function Home() {
       prompt: locale === 'zh'
         ? "【后期优化/修改要求】：\n" + instruction + "\n\n请严格基于下方提供的【当前已有内容】进行修改和润色，不要偏离原意，保持原文未要求修改的部分基本不变。"
         : "Refinement request:\n" + instruction + "\n\nPlease revise and improve the content strictly based on the current draft below. Keep the original meaning and avoid unnecessary changes.",
-      content: cleanMarkdown, // Use currently generated content as the new base context
+      content: normalizedMarkdown, // Use currently generated content as the new base context
       model,
       locale,
       wordCount,
@@ -1107,7 +1116,7 @@ export default function Home() {
     setError(null);
     
     try {
-      let markdownForDownload = normalizeSignatureBlockForDownload(cleanMarkdown);
+      let markdownForDownload = normalizeSignatureBlockForDownload(normalizedMarkdown);
       markdownForDownload = await convertMermaidBlocksToImages(markdownForDownload);
       const response = await fetch('/api/download', {
         method: 'POST',
@@ -1650,7 +1659,7 @@ export default function Home() {
                           overrides: createMarkdownOverrides('max-h-64')
                         }}
                       >
-                        {cleanMarkdown}
+                        {normalizedMarkdown}
                       </Markdown>
                     ) : (
                       <div className="text-gray-400 flex items-center justify-center h-full w-full gap-2 animate-pulse">
@@ -1938,7 +1947,7 @@ export default function Home() {
                       overrides: createMarkdownOverrides('max-h-96')
                     }}
                   >
-                    {cleanMarkdown}
+                    {normalizedMarkdown}
                   </Markdown>
                 </div>
               ) : null}
