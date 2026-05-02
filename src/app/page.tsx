@@ -1628,7 +1628,7 @@ export default function Home() {
 
               {/* Generated Content View */}
               {(displayedMarkdown || isFetching || isTyping) && (
-                <div className="mt-6 border border-gray-200 rounded-lg overflow-hidden bg-gray-50 flex flex-col flex-1 min-h-[300px] transition-all">
+                <div className="mt-6 border border-gray-200 rounded-lg overflow-hidden bg-gray-50 flex flex-col min-h-[300px] max-h-[60vh] lg:max-h-[520px] transition-all">
                   <div className="bg-gray-100 border-b border-gray-200 px-3 py-2 flex items-center justify-between shrink-0">
                     <span className="text-xs font-medium text-gray-600">{locale === 'zh' ? '生成预览' : 'Preview'}</span>
                     <button 
