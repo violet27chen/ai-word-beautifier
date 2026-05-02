@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useMemo, memo } from 'react';
+import { motion, useReducedMotion } from 'framer-motion';
 import { Download, Loader2, FileText, Settings, Wand2, AlertCircle, Upload, ImagePlus, X, ChevronDown, ChevronUp, Maximize2, Minimize2, SlidersHorizontal, Copy, Check } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -235,6 +236,8 @@ function getMammoth() {
 }
 
 export default function Home() {
+  const reduceMotion = useReducedMotion();
+
   const [locale, setLocale] = useState<Locale>('en');
   const [prompt, setPrompt] = useState('');
   const [content, setContent] = useState('');
@@ -1249,13 +1252,17 @@ export default function Home() {
   }), [uploadedImages, locale]);
 
   return (
-    <div className="min-h-screen bg-gray-50/50 flex flex-col">
+    <div className="min-h-screen bg-gradient-to-b from-white via-gray-50 to-white flex flex-col relative">
+      <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div className="absolute -top-32 -left-32 h-[520px] w-[520px] rounded-full bg-gradient-to-br from-indigo-300/30 via-violet-300/20 to-transparent blur-3xl" />
+        <div className="absolute -top-40 -right-40 h-[560px] w-[560px] rounded-full bg-gradient-to-br from-sky-300/25 via-indigo-300/20 to-transparent blur-3xl" />
+      </div>
       {/* Header */}
-      <header className="bg-white border-b border-gray-200 shrink-0 z-10">
+      <header className="bg-white/70 backdrop-blur border-b border-gray-200/60 shrink-0 z-10 relative">
         <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2 text-indigo-600">
             <Wand2 className="w-6 h-6" />
-            <h1 className="text-xl font-bold text-gray-900">{text('appTitle')}</h1>
+            <h1 className="text-xl font-bold tracking-tight bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent">{text('appTitle')}</h1>
           </div>
           <div className="flex items-center gap-3">
             <div className="rounded-lg bg-gray-100 px-3 py-1.5 text-sm font-medium text-indigo-700">
@@ -1290,25 +1297,35 @@ export default function Home() {
       {/* Main Content */}
       <main className="flex-1">
         <div className="max-w-[1600px] mx-auto px-4 pt-6">
-          <div className="bg-white border border-gray-200 rounded-2xl p-6 md:p-8 shadow-sm">
-            <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+          <motion.div
+            {...(reduceMotion
+              ? {}
+              : { initial: { opacity: 0, y: 10 }, animate: { opacity: 1, y: 0 }, transition: { duration: 0.5, ease: [0.22, 1, 0.36, 1] } })}
+            className="bg-gradient-to-b from-white to-indigo-50/30 border border-gray-200/70 rounded-2xl p-6 md:p-8 shadow-[0_10px_30px_rgba(15,23,42,0.06)] relative"
+          >
+            <div className="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
               <div className="max-w-2xl">
-                <h2 className="text-2xl md:text-3xl font-semibold text-gray-900 tracking-tight">{text('heroTitle')}</h2>
-                <p className="mt-2 text-sm md:text-base text-gray-600">{text('heroSubtitle')}</p>
+                <h2 className="text-2xl md:text-4xl font-semibold text-gray-900 tracking-tight leading-tight">{text('heroTitle')}</h2>
+                <p className="mt-3 text-sm md:text-base text-gray-600 leading-relaxed">{text('heroSubtitle')}</p>
               </div>
               <div className="flex flex-wrap gap-2">
-                <span className="inline-flex items-center rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700">{text('trustNoSignup')}</span>
-                <span className="inline-flex items-center rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700">{text('trustDocx')}</span>
-                <span className="inline-flex items-center rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700">{text('trustPrivacy')}</span>
+                <span className="inline-flex items-center rounded-full bg-white/70 backdrop-blur px-3 py-1 text-xs font-semibold text-gray-700 border border-gray-200/70 shadow-sm">{text('trustNoSignup')}</span>
+                <span className="inline-flex items-center rounded-full bg-white/70 backdrop-blur px-3 py-1 text-xs font-semibold text-gray-700 border border-gray-200/70 shadow-sm">{text('trustDocx')}</span>
+                <span className="inline-flex items-center rounded-full bg-white/70 backdrop-blur px-3 py-1 text-xs font-semibold text-gray-700 border border-gray-200/70 shadow-sm">{text('trustPrivacy')}</span>
               </div>
             </div>
-          </div>
+          </motion.div>
         </div>
         <div className="max-w-[1600px] mx-auto px-4 py-6 flex flex-col lg:flex-row gap-6">
           
           {/* Left Column: Advanced Settings */}
           <div className="w-full lg:w-[25%] lg:pr-2 pb-6 space-y-6">
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <motion.div
+              {...(reduceMotion
+                ? {}
+                : { initial: { opacity: 0, y: 10 }, animate: { opacity: 1, y: 0 }, transition: { duration: 0.45, delay: 0.05, ease: [0.22, 1, 0.36, 1] } })}
+              className="bg-white/80 backdrop-blur rounded-xl shadow-[0_10px_30px_rgba(15,23,42,0.05)] border border-gray-200/70 p-6"
+            >
               <h2 className="text-lg font-semibold text-gray-800 mb-6 flex items-center gap-2">
                 <SlidersHorizontal className="w-5 h-5 text-indigo-500" />
                 {text('advancedTitle')}
@@ -1410,10 +1427,15 @@ export default function Home() {
                   <p className="mt-1 text-xs text-gray-500">{text('diagramHint')}</p>
                 </div>
               </div>
-            </div>
+            </motion.div>
 
             {/* Author & Date Settings Card */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <motion.div
+              {...(reduceMotion
+                ? {}
+                : { initial: { opacity: 0, y: 10 }, animate: { opacity: 1, y: 0 }, transition: { duration: 0.45, delay: 0.1, ease: [0.22, 1, 0.36, 1] } })}
+              className="mt-6 bg-white/80 backdrop-blur rounded-xl shadow-[0_10px_30px_rgba(15,23,42,0.05)] border border-gray-200/70 p-6"
+            >
               <h2 className="text-lg font-semibold text-gray-800 mb-6 flex items-center gap-2">
                 <FileText className="w-5 h-5 text-indigo-500" />
                 {text('signatureTitle')}
@@ -1459,13 +1481,18 @@ export default function Home() {
                   </div>
                 )}
               </div>
-            </div>
+            </motion.div>
           </div>
 
           {/* Middle Column: Inputs */}
           <div className="w-full lg:w-[45%] lg:pr-2 pb-6 space-y-6">
             {/* Settings Card */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <motion.div
+            {...(reduceMotion
+              ? {}
+              : { initial: { opacity: 0, y: 10 }, animate: { opacity: 1, y: 0 }, transition: { duration: 0.45, delay: 0.1, ease: [0.22, 1, 0.36, 1] } })}
+            className="bg-white/80 backdrop-blur rounded-xl shadow-[0_10px_30px_rgba(15,23,42,0.05)] border border-gray-200/70 p-6"
+          >
             <div className="flex items-center gap-2 mb-4 text-gray-800">
               <Settings className="w-5 h-5 text-gray-500" />
               <h2 className="text-lg font-semibold">{text('generationSettings')}</h2>
@@ -1492,7 +1519,7 @@ export default function Home() {
                   </p>
                 )}
               </div>
-              <div className="rounded-xl border border-gray-200 bg-gray-50/60 p-4">
+              <div className="rounded-xl border border-gray-200/70 bg-white/60 p-4 shadow-sm">
                 <div className="flex items-center justify-between gap-3">
                   <div>
                     <div className="text-sm font-semibold text-gray-900">{text('templatesTitle')}</div>
@@ -1501,15 +1528,16 @@ export default function Home() {
                 </div>
                 <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {templates.map((t) => (
-                    <button
+                    <motion.button
                       key={t.title}
                       type="button"
                       onClick={() => applyTemplate(t)}
-                      className="text-left rounded-lg border border-gray-200 bg-white px-3 py-2 hover:border-indigo-300 hover:bg-indigo-50/40 transition-colors"
+                      {...(reduceMotion ? {} : { whileHover: { y: -2 }, whileTap: { scale: 0.99 } })}
+                      className="text-left rounded-lg border border-gray-200/70 bg-white/80 backdrop-blur px-3 py-2 hover:border-indigo-300/80 hover:bg-indigo-50/30 transition-colors shadow-sm hover:shadow-md"
                     >
                       <div className="text-sm font-medium text-gray-900">{t.title}</div>
                       <div className="mt-0.5 text-xs text-gray-600">{t.description}</div>
-                    </button>
+                    </motion.button>
                   ))}
                 </div>
               </div>
@@ -1526,10 +1554,15 @@ export default function Home() {
                 />
               </div>
             </div>
-          </div>
+          </motion.div>
 
           {/* Content Card */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+          <motion.div
+            {...(reduceMotion
+              ? {}
+              : { initial: { opacity: 0, y: 10 }, animate: { opacity: 1, y: 0 }, transition: { duration: 0.45, delay: 0.15, ease: [0.22, 1, 0.36, 1] } })}
+            className="bg-white/80 backdrop-blur rounded-xl shadow-[0_10px_30px_rgba(15,23,42,0.05)] border border-gray-200/70 overflow-hidden"
+          >
             <div 
               className="p-6 cursor-pointer hover:bg-gray-50 transition-colors flex items-center justify-between"
               onClick={() => setIsContentOpen(!isContentOpen)}
@@ -1587,9 +1620,14 @@ export default function Home() {
                 />
               </div>
             )}
-          </div>
+          </motion.div>
           {/* Image Upload Section */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <motion.div
+              {...(reduceMotion
+                ? {}
+                : { initial: { opacity: 0, y: 10 }, animate: { opacity: 1, y: 0 }, transition: { duration: 0.45, delay: 0.18, ease: [0.22, 1, 0.36, 1] } })}
+              className="bg-white/80 backdrop-blur rounded-xl shadow-[0_10px_30px_rgba(15,23,42,0.05)] border border-gray-200/70 p-6"
+            >
               <div className="flex flex-col mb-4 gap-2">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 text-gray-800">
@@ -1643,22 +1681,28 @@ export default function Home() {
               onChange={handleImageUpload}
               className="hidden"
             />
-          </div>
+          </motion.div>
         </div>
 
           {/* Right Column: Actions & Status */}
           <div className="w-full lg:w-[40%] lg:pr-2 pb-6 flex flex-col">
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 flex flex-col min-h-max">
+            <motion.div
+              {...(reduceMotion
+                ? {}
+                : { initial: { opacity: 0, y: 10 }, animate: { opacity: 1, y: 0 }, transition: { duration: 0.45, delay: 0.2, ease: [0.22, 1, 0.36, 1] } })}
+              className="bg-white/80 backdrop-blur rounded-xl shadow-[0_10px_30px_rgba(15,23,42,0.05)] border border-gray-200/70 p-6 flex flex-col min-h-max"
+            >
               <h2 className="text-lg font-semibold text-gray-800 mb-4 shrink-0">{locale === 'zh' ? '操作面板' : 'Actions'}</h2>
               
-              <button
+              <motion.button
                 onClick={handleGenerate}
                 disabled={isFetching || isTyping}
+                {...(reduceMotion ? {} : { whileHover: { y: -1 }, whileTap: { scale: 0.99 } })}
                 className={cn(
-                  "w-full flex items-center justify-center gap-2 py-3 px-4 rounded-lg font-medium text-white transition-all shadow-sm shrink-0",
+                  "w-full flex items-center justify-center gap-2 py-3 px-4 rounded-lg font-medium text-white transition-all shadow-sm shrink-0 bg-gradient-to-r from-indigo-600 to-violet-600",
                   (isFetching || isTyping) 
-                    ? "bg-indigo-400 cursor-not-allowed" 
-                    : "bg-indigo-600 hover:bg-indigo-700 hover:shadow"
+                    ? "opacity-70 cursor-not-allowed" 
+                    : "hover:shadow-md"
                 )}
               >
                 {isFetching || isTyping ? (
@@ -1672,7 +1716,7 @@ export default function Home() {
                     {locale === 'zh' ? '开始排版并生成' : 'Generate & Format'}
                   </>
                 )}
-              </button>
+              </motion.button>
 
               <div className="text-xs text-gray-500 text-center mt-3 shrink-0">
                 {locale === 'zh' ? '点击开始排版并生成即表示您同意本站的' : 'By using this site, you agree to the'}
@@ -1784,8 +1828,8 @@ export default function Home() {
                   </div>
                 )}
               </div>
-            </div>
-          </div>
+          </motion.div>
+        </div>
         </div>
 
         <div className="max-w-[1600px] mx-auto px-4 pb-10">
