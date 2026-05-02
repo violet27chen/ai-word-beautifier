@@ -23,7 +23,11 @@ const nextConfig: NextConfig = {
     'word.qiyuan.icu',
     'violetteam.cloud',
     'localhost:3000',
-    '10.4.0.3:3000'
+    '127.0.0.1',
+    '127.0.0.1:3000',
+    '10.4.0.3:3000',
+    'run-agent-69f4af918281299a7f506021-moolp1gt-preview.agent-sandbox-my-c1-gw.trae.ai',
+    'run-agent-69f4af918281299a7f506021-moolp1gt.remote-agent.svc.cluster.local'
   ],
   
   // 禁用严格模式以避免开发时的警告

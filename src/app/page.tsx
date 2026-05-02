@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useMemo, memo } from 'react';
+import { motion, useReducedMotion } from 'framer-motion';
 import { Download, Loader2, FileText, Settings, Wand2, AlertCircle, Upload, ImagePlus, X, ChevronDown, ChevronUp, Maximize2, Minimize2, SlidersHorizontal, Copy, Check } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -235,6 +236,8 @@ function getMammoth() {
 }
 
 export default function Home() {
+  const reduceMotion = useReducedMotion();
+
   const [locale, setLocale] = useState<Locale>('en');
   const [prompt, setPrompt] = useState('');
   const [content, setContent] = useState('');
@@ -496,36 +499,36 @@ export default function Home() {
     ];
 
   const defaultPreset = locale === 'zh'
-    ? '你将收到用户输入的一段简短内容（几句话或要点）。请将它扩写并排版为一份结构清晰、格式专业、可直接导出为 Word 的文档：\n- 使用分层标题（##/###）与列表\n- 适度加粗重点\n- 语气专业、逻辑清晰\n- 不要把整篇内容包进 ```markdown/```html 代码块'
-    : 'You will receive a short user input (a few sentences or bullet points). Expand it and format it into a clean, professional, Word-ready document:\n- Use headings (##/###) and lists\n- Bold key points when helpful\n- Keep tone professional and clear\n- Do not wrap the whole answer in ```markdown/```html code fences';
+    ? '你将收到用户输入的一段简短内容，可能是：\n- 一句话需求（例如“写一篇关于 XXX 的文章”）\n- 几句描述或要点\n请将其扩写并排版为一份结构清晰、格式专业、可直接导出为 Word 的文档：\n- 使用分层标题（##/###）与列表\n- 适度加粗重点\n- 语气专业、逻辑清晰\n- 不要把整篇内容包进 ```markdown/```html 代码块'
+    : 'You will receive a short user input, such as:\n- A one-line request (e.g. “Write an article about X”)\n- A short paragraph or bullet points\nExpand it and format it into a clean, professional, Word-ready document:\n- Use headings (##/###) and lists\n- Bold key points when helpful\n- Keep tone professional and clear\n- Do not wrap the whole answer in ```markdown/```html code fences';
 
   const templates = locale === 'zh'
     ? [
       {
         title: '整理成报告',
         description: '几句话/要点 → 结构化报告（含标题、要点与总结）。',
-        seed: '主题：智能手机的发展\n要点：\n- 起源：大哥大、IBM Simon、Palm/黑莓\n- 关键变革：iOS/Android、芯片、屏幕与影像\n- 现代场景：支付、社交、AI 助手、物联网\n- 趋势：折叠屏、卫星通信、隐私监管、可持续',
+        seed: '写一篇关于“智能手机的发展”的报告文章，面向普通读者但保持专业表达。\n请按“概述 → 发展阶段（按时间线） → 关键里程碑 → 现状与应用场景 → 未来趋势与挑战 → 总结”的结构组织内容，并在每个小节用要点列表提炼结论。\n最后给出一段 3-5 句的结语，强调对生活与产业的影响。',
         preset: '请把用户输入扩写并排版成一份报告，结构包含：概述、发展阶段（按时间线）、关键里程碑、现状与应用场景、未来趋势与挑战、总结。要求条理清晰、可读性强。',
         diagramMode: 'mindmap',
       },
       {
         title: '会议纪要',
         description: '把零散记录整理为摘要/决策/行动项。',
-        seed: '会议：产品需求评审\n要点：\n- 目标：5 月上线 MVP\n- 决策：先做登录+付费墙\n- 风险：模型成本、合规\n- 下一步：UI 走查、埋点方案',
+        seed: '写一份“产品需求评审”会议纪要。\n会议背景：我们要在 5 月上线 MVP；本次评审的核心是范围收敛与上线前准备。\n已达成共识：先上线登录（auth）+ 付费墙；主要风险是模型成本与合规；下一步需要 UI 走查与埋点方案。\n请输出：Executive Summary、Key Decisions、Action Items（表格，Owner/Deadline 可留空）、Open Questions & Risks。',
         preset: '请把用户输入整理为会议纪要，输出：会议摘要、关键决策、行动项（负责人/截止时间如未提供则留空）、风险与待确认问题。',
         diagramMode: 'none',
       },
       {
         title: '项目提案',
         description: '快速生成可落地的方案/计划/风险。',
-        seed: '想做一个面向海外用户的文档排版工具站：输入短内容自动变成 Word；支持模板、图片理解、导出 .docx。',
+        seed: '写一个项目提案：做一个面向海外用户的文档排版工具站（DocPolish）。\n用户只需输入一句话或一段短内容，就能生成结构清晰、排版专业的 Word 文档并下载 .docx；支持模板入口、可选图片理解、以及可选 Mermaid 图示。\n请明确目标用户、核心价值、MVP 范围、关键指标（如转化/留存）、里程碑计划与主要风险（成本/合规/质量）。',
         preset: '请把用户输入扩写成项目提案，结构：背景/问题、目标、方案设计、实施计划（里程碑）、资源与预算（估算即可）、风险与对策、结论与下一步。',
         diagramMode: 'flowchart',
       },
       {
         title: '一页简报',
         description: '快速输出可分享的一页式 Brief。',
-        seed: '主题：为 Shopify 商家做一个 AI 客服助手\n受众：产品/业务团队\n重点：价值、范围、指标、里程碑',
+        seed: '写一份一页简报：为 Shopify 商家做一个 AI 客服助手。\n受众：产品与业务团队（需要可执行的决策材料）。\n请覆盖：核心价值（能带来什么）、范围（做什么/不做什么）、关键指标（例如首响时间、解决率、节省人力）、以及 3 个阶段的里程碑（MVP/Beta/GA）。语言简洁但信息密度高。',
         preset: '请把用户输入扩写成一页简报，结构：Overview、Context、Key points、Recommendations、Next steps。要求简洁、有可执行的下一步。',
         diagramMode: 'none',
       },
@@ -534,28 +537,28 @@ export default function Home() {
       {
         title: 'Polish into a report',
         description: 'Short notes → a structured report with headings and summary.',
-        seed: 'Topic: The evolution of smartphones\nNotes:\n- Early era: brick phones, IBM Simon, Palm/BlackBerry\n- Big shifts: iOS/Android, chips, screens, cameras\n- Today: payments, social, AI assistants, IoT\n- What’s next: foldables, satellite connectivity, privacy regulation, sustainability',
+        seed: 'Write a Word-ready report about “The evolution of smartphones” for a general audience with a professional tone.\nUse this structure: Overview → Timeline (stages) → Key milestones → Today’s use cases → Future trends & challenges → Summary.\nAdd bullet-point takeaways in each section and finish with a 3–5 sentence conclusion.',
         preset: 'Expand the user input into a report with: Overview, Timeline (stages), Key milestones, Today’s use cases, Future trends & challenges, Summary. Keep it professional and Word-ready.',
         diagramMode: 'mindmap',
       },
       {
         title: 'Meeting notes',
         description: 'Turn rough notes into decisions and action items.',
-        seed: 'Meeting: Product requirements review\nNotes:\n- Goal: ship MVP in May\n- Decision: start with auth + paywall\n- Risks: model cost, compliance\n- Next: UI review, analytics plan',
+        seed: 'Create meeting notes for a “Product requirements review” meeting.\nContext: the team wants to ship an MVP in May and needs to lock scope.\nDecisions: start with authentication + paywall. Risks: model cost and compliance. Next steps: UI review and an analytics plan.\nOutput: Executive summary, Key decisions, Action items (table with owner / due date if available), Open questions & risks.',
         preset: 'Convert the user input into: Executive summary, Key decisions, Action items (owner / due date if available), Open questions & risks.',
         diagramMode: 'none',
       },
       {
         title: 'Project proposal',
         description: 'A practical proposal with plan and risks.',
-        seed: 'Idea: A global document formatting tool. Users paste short notes and export polished Word docs. Include templates, optional images, and .docx export.',
+        seed: 'Write a project proposal for a global document formatting tool (DocPolish).\nUsers can type one sentence or a short paragraph and export a polished .docx. Include template entry points, optional image understanding, and optional Mermaid diagrams.\nMake sure to define target users, MVP scope, success metrics (conversion/retention), milestones, and key risks (cost, compliance, quality).',
         preset: 'Write a project proposal with: Background, Goals, Proposed solution, Implementation plan (milestones), Resources & budget (estimates), Risks & mitigations, Conclusion & next steps.',
         diagramMode: 'flowchart',
       },
       {
         title: 'One-page brief',
         description: 'A concise brief you can share instantly.',
-        seed: 'Topic: AI customer support assistant for Shopify stores\nAudience: product & business team\nFocus: value, scope, metrics, milestones',
+        seed: 'Write a one-page brief for an “AI customer support assistant for Shopify stores”.\nAudience: product & business team.\nInclude: value proposition, scope (in/out), key metrics (first response time, resolution rate, saved hours), and a 3-phase milestone plan (MVP/Beta/GA). Keep it crisp but information-dense.',
         preset: 'Create a one-page brief with: Overview, Context, Key points, Recommendations, Next steps. Keep it crisp and actionable.',
         diagramMode: 'none',
       },
@@ -1249,13 +1252,17 @@ export default function Home() {
   }), [uploadedImages, locale]);
 
   return (
-    <div className="min-h-screen bg-gray-50/50 flex flex-col">
+    <div className="min-h-screen bg-gradient-to-b from-white via-gray-50 to-white flex flex-col relative isolate">
+      <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden -z-10">
+        <div className="absolute -top-32 -left-32 h-[520px] w-[520px] rounded-full bg-gradient-to-br from-indigo-300/30 via-violet-300/20 to-transparent blur-3xl" />
+        <div className="absolute -top-40 -right-40 h-[560px] w-[560px] rounded-full bg-gradient-to-br from-sky-300/25 via-indigo-300/20 to-transparent blur-3xl" />
+      </div>
       {/* Header */}
-      <header className="bg-white border-b border-gray-200 shrink-0 z-10">
+      <header className="bg-white/70 backdrop-blur border-b border-gray-200/60 shrink-0 z-10 relative">
         <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2 text-indigo-600">
             <Wand2 className="w-6 h-6" />
-            <h1 className="text-xl font-bold text-gray-900">{text('appTitle')}</h1>
+            <h1 className="text-xl font-bold tracking-tight bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent">{text('appTitle')}</h1>
           </div>
           <div className="flex items-center gap-3">
             <div className="rounded-lg bg-gray-100 px-3 py-1.5 text-sm font-medium text-indigo-700">
@@ -1290,25 +1297,35 @@ export default function Home() {
       {/* Main Content */}
       <main className="flex-1">
         <div className="max-w-[1600px] mx-auto px-4 pt-6">
-          <div className="bg-white border border-gray-200 rounded-2xl p-6 md:p-8 shadow-sm">
-            <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+          <motion.div
+            {...(reduceMotion
+              ? {}
+              : { initial: false, animate: { opacity: 1, y: 0 }, transition: { duration: 0.5, ease: [0.22, 1, 0.36, 1] } })}
+            className="bg-gradient-to-b from-white to-indigo-50/30 border border-gray-200/70 rounded-2xl p-6 md:p-8 shadow-[0_10px_30px_rgba(15,23,42,0.06)] relative"
+          >
+            <div className="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
               <div className="max-w-2xl">
-                <h2 className="text-2xl md:text-3xl font-semibold text-gray-900 tracking-tight">{text('heroTitle')}</h2>
-                <p className="mt-2 text-sm md:text-base text-gray-600">{text('heroSubtitle')}</p>
+                <h2 className="text-2xl md:text-4xl font-semibold text-gray-900 tracking-tight leading-tight">{text('heroTitle')}</h2>
+                <p className="mt-3 text-sm md:text-base text-gray-600 leading-relaxed">{text('heroSubtitle')}</p>
               </div>
               <div className="flex flex-wrap gap-2">
-                <span className="inline-flex items-center rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700">{text('trustNoSignup')}</span>
-                <span className="inline-flex items-center rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700">{text('trustDocx')}</span>
-                <span className="inline-flex items-center rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700">{text('trustPrivacy')}</span>
+                <span className="inline-flex items-center rounded-full bg-white/70 backdrop-blur px-3 py-1 text-xs font-semibold text-gray-700 border border-gray-200/70 shadow-sm">{text('trustNoSignup')}</span>
+                <span className="inline-flex items-center rounded-full bg-white/70 backdrop-blur px-3 py-1 text-xs font-semibold text-gray-700 border border-gray-200/70 shadow-sm">{text('trustDocx')}</span>
+                <span className="inline-flex items-center rounded-full bg-white/70 backdrop-blur px-3 py-1 text-xs font-semibold text-gray-700 border border-gray-200/70 shadow-sm">{text('trustPrivacy')}</span>
               </div>
             </div>
-          </div>
+          </motion.div>
         </div>
         <div className="max-w-[1600px] mx-auto px-4 py-6 flex flex-col lg:flex-row gap-6">
           
           {/* Left Column: Advanced Settings */}
           <div className="w-full lg:w-[25%] lg:pr-2 pb-6 space-y-6">
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <motion.div
+              {...(reduceMotion
+                ? {}
+                : { initial: false, animate: { opacity: 1, y: 0 }, transition: { duration: 0.45, delay: 0.05, ease: [0.22, 1, 0.36, 1] } })}
+              className="bg-white/80 backdrop-blur rounded-xl shadow-[0_10px_30px_rgba(15,23,42,0.05)] border border-gray-200/70 p-6"
+            >
               <h2 className="text-lg font-semibold text-gray-800 mb-6 flex items-center gap-2">
                 <SlidersHorizontal className="w-5 h-5 text-indigo-500" />
                 {text('advancedTitle')}
@@ -1410,10 +1427,15 @@ export default function Home() {
                   <p className="mt-1 text-xs text-gray-500">{text('diagramHint')}</p>
                 </div>
               </div>
-            </div>
+            </motion.div>
 
             {/* Author & Date Settings Card */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <motion.div
+              {...(reduceMotion
+                ? {}
+                : { initial: false, animate: { opacity: 1, y: 0 }, transition: { duration: 0.45, delay: 0.1, ease: [0.22, 1, 0.36, 1] } })}
+              className="mt-6 bg-white/80 backdrop-blur rounded-xl shadow-[0_10px_30px_rgba(15,23,42,0.05)] border border-gray-200/70 p-6"
+            >
               <h2 className="text-lg font-semibold text-gray-800 mb-6 flex items-center gap-2">
                 <FileText className="w-5 h-5 text-indigo-500" />
                 {text('signatureTitle')}
@@ -1459,13 +1481,18 @@ export default function Home() {
                   </div>
                 )}
               </div>
-            </div>
+            </motion.div>
           </div>
 
           {/* Middle Column: Inputs */}
           <div className="w-full lg:w-[45%] lg:pr-2 pb-6 space-y-6">
             {/* Settings Card */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <motion.div
+            {...(reduceMotion
+              ? {}
+              : { initial: false, animate: { opacity: 1, y: 0 }, transition: { duration: 0.45, delay: 0.1, ease: [0.22, 1, 0.36, 1] } })}
+            className="bg-white/80 backdrop-blur rounded-xl shadow-[0_10px_30px_rgba(15,23,42,0.05)] border border-gray-200/70 p-6"
+          >
             <div className="flex items-center gap-2 mb-4 text-gray-800">
               <Settings className="w-5 h-5 text-gray-500" />
               <h2 className="text-lg font-semibold">{text('generationSettings')}</h2>
@@ -1492,7 +1519,7 @@ export default function Home() {
                   </p>
                 )}
               </div>
-              <div className="rounded-xl border border-gray-200 bg-gray-50/60 p-4">
+              <div className="rounded-xl border border-gray-200/70 bg-white/60 p-4 shadow-sm">
                 <div className="flex items-center justify-between gap-3">
                   <div>
                     <div className="text-sm font-semibold text-gray-900">{text('templatesTitle')}</div>
@@ -1501,15 +1528,16 @@ export default function Home() {
                 </div>
                 <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {templates.map((t) => (
-                    <button
+                    <motion.button
                       key={t.title}
                       type="button"
                       onClick={() => applyTemplate(t)}
-                      className="text-left rounded-lg border border-gray-200 bg-white px-3 py-2 hover:border-indigo-300 hover:bg-indigo-50/40 transition-colors"
+                      {...(reduceMotion ? {} : { whileHover: { y: -2 }, whileTap: { scale: 0.99 } })}
+                      className="text-left rounded-lg border border-gray-200/70 bg-white/80 backdrop-blur px-3 py-2 hover:border-indigo-300/80 hover:bg-indigo-50/30 transition-colors shadow-sm hover:shadow-md"
                     >
                       <div className="text-sm font-medium text-gray-900">{t.title}</div>
                       <div className="mt-0.5 text-xs text-gray-600">{t.description}</div>
-                    </button>
+                    </motion.button>
                   ))}
                 </div>
               </div>
@@ -1526,10 +1554,15 @@ export default function Home() {
                 />
               </div>
             </div>
-          </div>
+          </motion.div>
 
           {/* Content Card */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+          <motion.div
+            {...(reduceMotion
+              ? {}
+              : { initial: false, animate: { opacity: 1, y: 0 }, transition: { duration: 0.45, delay: 0.15, ease: [0.22, 1, 0.36, 1] } })}
+            className="bg-white/80 backdrop-blur rounded-xl shadow-[0_10px_30px_rgba(15,23,42,0.05)] border border-gray-200/70 overflow-hidden"
+          >
             <div 
               className="p-6 cursor-pointer hover:bg-gray-50 transition-colors flex items-center justify-between"
               onClick={() => setIsContentOpen(!isContentOpen)}
@@ -1587,9 +1620,14 @@ export default function Home() {
                 />
               </div>
             )}
-          </div>
+          </motion.div>
           {/* Image Upload Section */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <motion.div
+              {...(reduceMotion
+                ? {}
+                : { initial: false, animate: { opacity: 1, y: 0 }, transition: { duration: 0.45, delay: 0.18, ease: [0.22, 1, 0.36, 1] } })}
+              className="bg-white/80 backdrop-blur rounded-xl shadow-[0_10px_30px_rgba(15,23,42,0.05)] border border-gray-200/70 p-6"
+            >
               <div className="flex flex-col mb-4 gap-2">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 text-gray-800">
@@ -1643,22 +1681,28 @@ export default function Home() {
               onChange={handleImageUpload}
               className="hidden"
             />
-          </div>
+          </motion.div>
         </div>
 
           {/* Right Column: Actions & Status */}
           <div className="w-full lg:w-[40%] lg:pr-2 pb-6 flex flex-col">
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 flex flex-col min-h-max">
+            <motion.div
+              {...(reduceMotion
+                ? {}
+                : { initial: false, animate: { opacity: 1, y: 0 }, transition: { duration: 0.45, delay: 0.2, ease: [0.22, 1, 0.36, 1] } })}
+              className="bg-white/80 backdrop-blur rounded-xl shadow-[0_10px_30px_rgba(15,23,42,0.05)] border border-gray-200/70 p-6 flex flex-col min-h-max"
+            >
               <h2 className="text-lg font-semibold text-gray-800 mb-4 shrink-0">{locale === 'zh' ? '操作面板' : 'Actions'}</h2>
               
-              <button
+              <motion.button
                 onClick={handleGenerate}
                 disabled={isFetching || isTyping}
+                {...(reduceMotion ? {} : { whileHover: { y: -1 }, whileTap: { scale: 0.99 } })}
                 className={cn(
-                  "w-full flex items-center justify-center gap-2 py-3 px-4 rounded-lg font-medium text-white transition-all shadow-sm shrink-0",
+                  "w-full flex items-center justify-center gap-2 py-3 px-4 rounded-lg font-medium text-white transition-all shadow-sm shrink-0 bg-gradient-to-r from-indigo-600 to-violet-600",
                   (isFetching || isTyping) 
-                    ? "bg-indigo-400 cursor-not-allowed" 
-                    : "bg-indigo-600 hover:bg-indigo-700 hover:shadow"
+                    ? "opacity-70 cursor-not-allowed" 
+                    : "hover:shadow-md"
                 )}
               >
                 {isFetching || isTyping ? (
@@ -1672,7 +1716,7 @@ export default function Home() {
                     {locale === 'zh' ? '开始排版并生成' : 'Generate & Format'}
                   </>
                 )}
-              </button>
+              </motion.button>
 
               <div className="text-xs text-gray-500 text-center mt-3 shrink-0">
                 {locale === 'zh' ? '点击开始排版并生成即表示您同意本站的' : 'By using this site, you agree to the'}
@@ -1784,8 +1828,8 @@ export default function Home() {
                   </div>
                 )}
               </div>
-            </div>
-          </div>
+          </motion.div>
+        </div>
         </div>
 
         <div className="max-w-[1600px] mx-auto px-4 pb-10">
