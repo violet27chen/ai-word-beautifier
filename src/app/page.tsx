@@ -1,7 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect, useMemo, memo } from 'react';
-import { motion, useReducedMotion } from 'framer-motion';
+import { useState, useRef, useEffect } from 'react';
 import { Download, Loader2, FileText, Settings, Wand2, AlertCircle, Upload, ImagePlus, X, ChevronDown, ChevronUp, Maximize2, Minimize2, SlidersHorizontal, Copy, Check } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -15,7 +14,7 @@ type Locale = 'en' | 'zh';
 
 const LOCALE_STORAGE_KEY = '__app_locale__';
 
-function resolvePreferredLocale(): Locale {
+function resolveInitialLocale(): Locale {
   if (typeof window === 'undefined') return 'en';
   const saved = window.localStorage.getItem(LOCALE_STORAGE_KEY);
   if (saved === 'en' || saved === 'zh') return saved;
@@ -25,32 +24,31 @@ function resolvePreferredLocale(): Locale {
 
 type ModelOption = {
   value: string;
-  labelEn: string;
-  labelZh: string;
+  label: string;
   supportsImage: boolean;
 };
 
 const MODELS: ModelOption[] = [
-  { value: 'deepseek-v4-flash', labelEn: 'DeepSeek V4 Flash (Default)', labelZh: 'DeepSeek-V4-Flash (默认)', supportsImage: false },
-  { value: 'deepseek-v4-pro', labelEn: 'DeepSeek V4 Pro', labelZh: 'DeepSeek-V4-Pro', supportsImage: false },
-  { value: 'mimo-v2.5-pro', labelEn: 'MiMo v2.5 Pro (Xiaomi)', labelZh: 'MiMo-v2.5-pro (小米)', supportsImage: false },
-  { value: 'mimo-v2-pro', labelEn: 'MiMo v2 Pro (Xiaomi)', labelZh: 'MiMo-v2-pro (小米)', supportsImage: false },
-  { value: 'mimo-v2.5', labelEn: 'MiMo v2.5 (Xiaomi)', labelZh: 'MiMo-v2.5 (小米)', supportsImage: true },
-  { value: 'mimo-v2-omni', labelEn: 'MiMo Omni (Xiaomi)', labelZh: 'MiMo-Omni (全模态，小米)', supportsImage: true },
-  { value: 'mimo-v2-flash', labelEn: 'MiMo v2 Flash (Xiaomi)', labelZh: 'MiMo-v2-flash (小米)', supportsImage: false },
-  { value: 'kimi-k2.6', labelEn: 'Kimi K2.6 (Multimodal)', labelZh: 'Kimi-K2.6 (多模态)', supportsImage: true },
-  { value: 'kimi-k2.5', labelEn: 'Kimi K2.5 (Multimodal)', labelZh: 'Kimi-K2.5 (多模态)', supportsImage: true },
-  { value: 'moonshot-v1-8k', labelEn: 'Moonshot v1 8k', labelZh: 'Moonshot-v1-8k', supportsImage: false },
-  { value: 'moonshot-v1-32k', labelEn: 'Moonshot v1 32k', labelZh: 'Moonshot-v1-32k', supportsImage: false },
-  { value: 'moonshot-v1-128k', labelEn: 'Moonshot v1 128k', labelZh: 'Moonshot-v1-128k', supportsImage: false },
-  { value: 'moonshot-v1-8k-vision-preview', labelEn: 'Moonshot v1 8k (Vision)', labelZh: 'Moonshot-v1-8k-vision-preview (视觉)', supportsImage: true },
-  { value: 'moonshot-v1-32k-vision-preview', labelEn: 'Moonshot v1 32k (Vision)', labelZh: 'Moonshot-v1-32k-vision-preview (视觉)', supportsImage: true },
-  { value: 'moonshot-v1-128k-vision-preview', labelEn: 'Moonshot v1 128k (Vision)', labelZh: 'Moonshot-v1-128k-vision-preview (视觉)', supportsImage: true },
-  { value: 'glm-4.7', labelEn: 'GLM 4.7', labelZh: 'GLM-4.7 高智能模型', supportsImage: false },
-  { value: 'glm-5.1', labelEn: 'GLM 5.1', labelZh: 'GLM-5.1 最新旗舰', supportsImage: false },
-  { value: 'glm-5v-turbo', labelEn: 'GLM 5V Turbo (Multimodal)', labelZh: 'GLM-5V-Turbo (多模态)', supportsImage: true },
-  { value: 'qwen3.5-flash', labelEn: 'Qwen 3.5 Flash', labelZh: 'Qwen3.5-Flash (阿里云百炼)', supportsImage: false },
-  { value: 'doubao-seed-1-6-flash-250828', labelEn: 'Doubao Seed 1.6 Flash (Multimodal)', labelZh: 'Doubao-Seed-1.6-Flash (豆包多模态)', supportsImage: true },
+  { value: 'deepseek-v4-flash', label: 'DeepSeek-V4-Flash (默认)', supportsImage: false },
+  { value: 'deepseek-v4-pro', label: 'DeepSeek-V4-Pro', supportsImage: false },
+  { value: 'mimo-v2.5-pro', label: 'MiMo-v2.5-pro (小米)', supportsImage: false },
+  { value: 'mimo-v2-pro', label: 'MiMo-v2-pro (小米)', supportsImage: false },
+  { value: 'mimo-v2.5', label: 'MiMo-v2.5 (小米)', supportsImage: true },
+  { value: 'mimo-v2-omni', label: 'MiMo-Omni (全模态，小米)', supportsImage: true },
+  { value: 'mimo-v2-flash', label: 'MiMo-v2-flash (小米)', supportsImage: false },
+  { value: 'kimi-k2.6', label: 'Kimi-K2.6 (多模态)', supportsImage: true },
+  { value: 'kimi-k2.5', label: 'Kimi-K2.5 (多模态)', supportsImage: true },
+  { value: 'moonshot-v1-8k', label: 'Moonshot-v1-8k', supportsImage: false },
+  { value: 'moonshot-v1-32k', label: 'Moonshot-v1-32k', supportsImage: false },
+  { value: 'moonshot-v1-128k', label: 'Moonshot-v1-128k', supportsImage: false },
+  { value: 'moonshot-v1-8k-vision-preview', label: 'Moonshot-v1-8k-vision-preview (视觉)', supportsImage: true },
+  { value: 'moonshot-v1-32k-vision-preview', label: 'Moonshot-v1-32k-vision-preview (视觉)', supportsImage: true },
+  { value: 'moonshot-v1-128k-vision-preview', label: 'Moonshot-v1-128k-vision-preview (视觉)', supportsImage: true },
+  { value: 'glm-4.7', label: 'GLM-4.7 高智能模型', supportsImage: false },
+  { value: 'glm-5.1', label: 'GLM-5.1 最新旗舰', supportsImage: false },
+  { value: 'glm-5v-turbo', label: 'GLM-5V-Turbo (多模态)', supportsImage: true },
+  { value: 'qwen3.5-flash', label: 'Qwen3.5-Flash (阿里云百炼)', supportsImage: false },
+  { value: 'doubao-seed-1-6-flash-250828', label: 'Doubao-Seed-1.6-Flash (豆包多模态)', supportsImage: true },
 ];
 
 const WRITING_STYLES = [
@@ -96,11 +94,10 @@ type MermaidRenderer = {
 };
 
 let mermaidLoaderPromise: Promise<MermaidRenderer> | null = null;
-let mermaidPreviewInitialized = false;
 
 function loadMermaid(): Promise<MermaidRenderer> {
   if (typeof window === 'undefined') {
-    return Promise.reject(new Error('Mermaid can only be used in the browser'));
+    return Promise.reject(new Error('Mermaid 仅可在浏览器中使用'));
   }
   if (mermaidLoaderPromise) {
     return mermaidLoaderPromise;
@@ -109,9 +106,25 @@ function loadMermaid(): Promise<MermaidRenderer> {
     .then((module) => {
       const mermaid = (module.default || module) as unknown as MermaidRenderer;
       if (!mermaid?.initialize || !mermaid?.render) {
-        throw new Error('Mermaid module is unavailable');
+        throw new Error('Mermaid 模块不可用');
       }
-      if (!mermaidPreviewInitialized) {
+      return mermaid;
+    });
+  return mermaidLoaderPromise;
+}
+
+function MermaidDiagram({ code }: { code: string }) {
+  const [locale] = useState<Locale>(() => resolveInitialLocale());
+  const [svg, setSvg] = useState('');
+  const [renderError, setRenderError] = useState('');
+  const chartCode = code.trim();
+
+  useEffect(() => {
+    if (!chartCode) return;
+    let active = true;
+    const renderMermaid = async () => {
+      try {
+        const mermaid = await loadMermaid();
         mermaid.initialize({
           startOnLoad: false,
           securityLevel: 'loose',
@@ -120,45 +133,13 @@ function loadMermaid(): Promise<MermaidRenderer> {
             useMaxWidth: false,
           },
         });
-        mermaidPreviewInitialized = true;
-      }
-      return mermaid;
-    });
-  return mermaidLoaderPromise;
-}
-
-function useDebouncedValue<T>(value: T, delayMs: number) {
-  const [debounced, setDebounced] = useState(value);
-  useEffect(() => {
-    const timer = window.setTimeout(() => setDebounced(value), delayMs);
-    return () => {
-      window.clearTimeout(timer);
-    };
-  }, [value, delayMs]);
-  return debounced;
-}
-
-const MermaidDiagram = memo(function MermaidDiagram({ code, locale }: { code: string; locale: Locale }) {
-  const [svg, setSvg] = useState('');
-  const [renderError, setRenderError] = useState('');
-  const chartCode = code.trim();
-  const debouncedChartCode = useDebouncedValue(chartCode, 350);
-
-  useEffect(() => {
-    if (!debouncedChartCode) return;
-    let active = true;
-    const renderMermaid = async () => {
-      try {
-        const mermaid = await loadMermaid();
-        const uuid = typeof crypto !== 'undefined' && 'randomUUID' in crypto
-          ? crypto.randomUUID()
-          : Math.random().toString(36).slice(2);
-        const { svg: renderedSvg } = await mermaid.render(`mermaid-${uuid}`, debouncedChartCode);
+        const { svg: renderedSvg } = await mermaid.render(`mermaid-${crypto.randomUUID()}`, chartCode);
         if (!active) return;
         setSvg(renderedSvg);
         setRenderError('');
       } catch {
         if (!active) return;
+        setSvg('');
         setRenderError(locale === 'zh' ? '图示渲染失败，请检查 Mermaid 语法后重试。' : 'Failed to render the diagram. Please check the Mermaid syntax and try again.');
       }
     };
@@ -166,7 +147,7 @@ const MermaidDiagram = memo(function MermaidDiagram({ code, locale }: { code: st
     return () => {
       active = false;
     };
-  }, [debouncedChartCode, locale]);
+  }, [chartCode, locale]);
 
   if (!chartCode) {
     return null;
@@ -179,53 +160,6 @@ const MermaidDiagram = memo(function MermaidDiagram({ code, locale }: { code: st
     return <div className="my-3 rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-500">{locale === 'zh' ? '图示渲染中...' : 'Rendering diagram...'}</div>;
   }
   return <div className="mermaid-diagram my-3 overflow-x-auto rounded-md border border-gray-200 bg-white p-2" dangerouslySetInnerHTML={{ __html: svg }} />;
-});
-
-function createMarkdownOverrides(args: {
-  imageClassName: string;
-  uploadedImages: ReadonlyArray<{ id: string; base64: string }>;
-  locale: Locale;
-}) {
-  const { imageClassName, uploadedImages, locale } = args;
-  return {
-    img: {
-      component: ({ alt, src, ...props }: React.ImgHTMLAttributes<HTMLImageElement>) => {
-        let resolvedSrc = src;
-        const matchedImg = uploadedImages.find((img) => img.id === src);
-        if (matchedImg) {
-          resolvedSrc = matchedImg.base64;
-        }
-        const ImgElement = 'img';
-        return (
-          <ImgElement
-            alt={alt}
-            src={resolvedSrc}
-            className={cn('rounded-lg shadow-sm border border-gray-200 object-contain mx-auto', imageClassName)}
-            {...props}
-          />
-        );
-      },
-    },
-    pre: {
-      component: ({ children, ...props }: React.HTMLAttributes<HTMLPreElement>) => {
-        const firstChild = Array.isArray(children) ? children[0] : children;
-        if (firstChild && typeof firstChild === 'object' && 'props' in firstChild) {
-          const codeNode = firstChild as React.ReactElement<{ className?: string; children?: React.ReactNode }>;
-          const className = codeNode.props.className || '';
-          const codeContent = Array.isArray(codeNode.props.children)
-            ? codeNode.props.children.join('')
-            : String(codeNode.props.children ?? '');
-          if (className.includes('language-mermaid')) {
-            return <MermaidDiagram code={codeContent} locale={locale} />;
-          }
-          if (/^mermaid\s*\n/i.test(codeContent)) {
-            return <MermaidDiagram code={codeContent.replace(/^mermaid\s*\n/i, '')} locale={locale} />;
-          }
-        }
-        return <pre {...props}>{children}</pre>;
-      },
-    },
-  };
 }
 
 function getMammoth() {
@@ -236,8 +170,6 @@ function getMammoth() {
 }
 
 export default function Home() {
-  const reduceMotion = useReducedMotion();
-
   const [locale, setLocale] = useState<Locale>('en');
   const [prompt, setPrompt] = useState('');
   const [content, setContent] = useState('');
@@ -264,6 +196,10 @@ export default function Home() {
   // const [isUsdtCopied, setIsUsdtCopied] = useState(false);
   // const hasUsdtDonationInfo = Boolean(USDT_DONATION_NETWORK && USDT_DONATION_ADDRESS);
 
+  useEffect(() => {
+    setLocale(resolveInitialLocale());
+  }, []);
+
   const handleCopy = async () => {
     try {
       await navigator.clipboard.writeText(copyFriendlyMarkdown);
@@ -287,9 +223,6 @@ export default function Home() {
   const resultRef = useRef<HTMLDivElement>(null);
   const modalResultRef = useRef<HTMLDivElement>(null);
   const [autoScroll, setAutoScroll] = useState(true);
-  const autoScrollRef = useRef(true);
-  const autoScrollRafRef = useRef<number | null>(null);
-  const autoScrollNextRef = useRef<boolean | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
@@ -306,11 +239,6 @@ export default function Home() {
   const [documentDate, setDocumentDate] = useState('');
   const [refinePrompt, setRefinePrompt] = useState('');
   const [diagramMode, setDiagramMode] = useState('none');
-  const [templatePreset, setTemplatePreset] = useState('');
-
-  useEffect(() => {
-    setLocale(resolvePreferredLocale());
-  }, []);
 
   useEffect(() => {
     window.localStorage.setItem(LOCALE_STORAGE_KEY, locale);
@@ -318,21 +246,28 @@ export default function Home() {
 
   const text = (key: string) => {
     const en: Record<string, string> = {
-      appTitle: 'DocPolish',
+      appTitle: 'AI Document Formatter',
       navFormatter: 'Formatter',
       badgeBeta: 'Free during beta',
-      heroTitle: 'Turn messy drafts into polished Word docs',
-      heroSubtitle: 'Generate, rewrite, and format in seconds. Export to .docx with clean structure, headings, lists, and optional diagrams.',
-      trustNoSignup: 'No sign-up',
-      trustDocx: 'Export .docx',
-      trustPrivacy: 'Privacy-first',
-      templatesTitle: 'Quick templates',
-      templatesHint: 'Choose a document type. We’ll turn your short input into a structured Word-ready doc.',
+      diffTitle: 'Not just “generate a doc”',
+      diffSubtitle: 'Compare typical AI chat output vs. a Word-ready document you can download and share.',
+      diffToggleShow: 'Show comparison',
+      diffToggleHide: 'Hide',
+      diffLeftTitle: 'Typical AI output',
+      diffRightTitle: 'DocPolish output',
+      diffLeftP1: 'Plain text / Markdown that still needs manual formatting.',
+      diffRightP1: 'Structured, polished content that exports to .docx.',
+      diffLeftB1: 'Hard to copy into Word cleanly',
+      diffLeftB2: 'No image insertion (only descriptions)',
+      diffLeftB3: 'No consistent headings / spacing',
+      diffRightB1: 'One-click .docx download',
+      diffRightB2: 'Upload images and insert into the document',
+      diffRightB3: 'Templates + headings + lists by default',
       generationSettings: 'Generation Settings',
       chooseModel: 'Model',
       modelHintVisionOnly: 'Images uploaded: only multimodal models are available in the dropdown.',
-      promptLabel: 'Describe the document you want to create',
-      promptPlaceholder: 'Paste a few sentences or bullet points (short is fine). We’ll expand and format it into a full document.',
+      promptLabel: 'Instructions',
+      promptPlaceholder: 'Example: Write a project proposal. Keep it professional and well-structured with headings, lists, and a conclusion.',
       contentCardTitle: 'Source Content (Optional)',
       contentFilled: 'Added',
       contentHint: 'Paste text or upload a .docx to beautify an existing document.',
@@ -371,7 +306,7 @@ export default function Home() {
       privacy: 'Privacy',
       agreementBrackets: 'Terms',
       privacyBrackets: 'Privacy Policy',
-      errorNeedPrompt: 'Please enter some content (a short note is enough).',
+      errorNeedPrompt: 'Please enter instructions.',
       errorUploadDocxOnly: 'Only .docx files are supported.',
       errorReadDocx: 'Failed to read document: ',
       errorDownload: 'Download failed.',
@@ -383,25 +318,32 @@ export default function Home() {
       errorQuota: 'Service quota exceeded. Please try again later.',
       privacyTitle: 'Privacy Policy',
       agreementTitle: 'Terms of Service',
-      footerBrand: 'DocPolish',
+      footerBrand: 'AI Document Formatter',
     };
 
     const zh: Record<string, string> = {
-      appTitle: 'DocPolish',
+      appTitle: 'AI Word 排版美化助手',
       navFormatter: '排版美化',
       badgeBeta: '全站免费体验中',
-      heroTitle: '把杂乱内容变成排版专业的 Word 文档',
-      heroSubtitle: '快速生成、改写与排版，一键导出 .docx；支持图片理解与 Mermaid 图示。',
-      trustNoSignup: '无需登录',
-      trustDocx: '导出 .docx',
-      trustPrivacy: '隐私优先',
-      templatesTitle: '快捷模板',
-      templatesHint: '选择文档类型：你只需输入简短内容，我们会自动扩写并排版成 Word。',
+      diffTitle: '不只是“生成一篇文档”',
+      diffSubtitle: '用对比法展示差异：传统 AI 输出 vs 可直接下载的 Word 成品。',
+      diffToggleShow: '查看对比',
+      diffToggleHide: '收起',
+      diffLeftTitle: '传统 AI 输出',
+      diffRightTitle: 'DocPolish 输出',
+      diffLeftP1: '多为纯文本/Markdown，需要你手动排版成 Word。',
+      diffRightP1: '自动结构化排版，一键导出 .docx 并可直接分享。',
+      diffLeftB1: '复制到 Word 容易乱格式',
+      diffLeftB2: '图片只能“描述”，不能直接插入',
+      diffLeftB3: '标题层级与段落间距不一致',
+      diffRightB1: '一键下载 .docx',
+      diffRightB2: '上传图片并插入到文档',
+      diffRightB3: '模板 + 标题 + 列表默认到位',
       generationSettings: '生成设置',
       chooseModel: '选择模型',
       modelHintVisionOnly: '已上传图片：下拉框仅显示支持图片理解的多模态模型。',
-      promptLabel: '请输入你需要制作的文档内容',
-      promptPlaceholder: '输入几句话或要点即可（越短也可以）。例如：产品介绍要点、会议要点、方案的核心想法...',
+      promptLabel: '排版/生成要求',
+      promptPlaceholder: '例如：请帮我写一份关于 AI 技术在医疗领域应用的商业计划书，要求排版专业，包含标题、正文、列表和总结...',
       contentCardTitle: '原始内容 (可选)',
       contentFilled: '已填写',
       contentHint: '如需美化已有文档，请展开粘贴文本或上传',
@@ -440,7 +382,7 @@ export default function Home() {
       privacy: '隐私政策',
       agreementBrackets: '《用户协议》',
       privacyBrackets: '《隐私政策》',
-      errorNeedPrompt: '请输入一些内容（简短要点也可以）',
+      errorNeedPrompt: '请输入排版或生成要求',
       errorUploadDocxOnly: '仅支持 .docx 格式的 Word 文档',
       errorReadDocx: '读取文档失败：',
       errorDownload: '下载失败',
@@ -452,7 +394,7 @@ export default function Home() {
       errorQuota: '服务额度不足，请稍后再试。',
       privacyTitle: '隐私政策',
       agreementTitle: '用户协议',
-      footerBrand: 'DocPolish',
+      footerBrand: 'AI Word 排版美化助手',
     };
 
     const dict = locale === 'zh' ? zh : en;
@@ -498,95 +440,12 @@ export default function Home() {
       { value: 'flowchart', label: 'Flowchart' },
     ];
 
-  const defaultPreset = locale === 'zh'
-    ? '你将收到用户输入的一段简短内容，可能是：\n- 一句话需求（例如“写一篇关于 XXX 的文章”）\n- 几句描述或要点\n请将其扩写并排版为一份结构清晰、格式专业、可直接导出为 Word 的文档：\n- 使用分层标题（##/###）与列表\n- 适度加粗重点\n- 语气专业、逻辑清晰\n- 标题与小节名称必须使用用户输入的语言（用户用中文就全中文，不要出现英文小标题）\n- 不要把整篇内容包进 ```markdown/```html 代码块'
-    : 'You will receive a short user input, such as:\n- A one-line request (e.g. “Write an article about X”)\n- A short paragraph or bullet points\nExpand it and format it into a clean, professional, Word-ready document:\n- Use headings (##/###) and lists\n- Bold key points when helpful\n- Keep tone professional and clear\n- Do not wrap the whole answer in ```markdown/```html code fences';
-
-  const templates = locale === 'zh'
-    ? [
-      {
-        title: '整理成报告',
-        description: '几句话/要点 → 结构化报告（含标题、要点与总结）。',
-        seed: '写一篇关于“智能手机的发展”的报告文章，面向普通读者但保持专业表达。\n请按“概述 → 发展阶段（按时间线） → 关键里程碑 → 现状与应用场景 → 未来趋势与挑战 → 总结”的结构组织内容，并在每个小节用要点列表提炼结论。\n最后给出一段 3-5 句的结语，强调对生活与产业的影响。',
-        preset: '请把用户输入扩写并排版成一份报告，结构包含：概述、发展阶段（按时间线）、关键里程碑、现状与应用场景、未来趋势与挑战、总结。要求条理清晰、可读性强。',
-        diagramMode: 'mindmap',
-      },
-      {
-        title: '会议纪要',
-        description: '把零散记录整理为摘要/决策/行动项。',
-        seed: '写一份“产品需求评审”会议纪要。\n会议背景：我们要在 5 月上线 MVP；本次评审的核心是范围收敛与上线前准备。\n已达成共识：先上线登录（auth）+ 付费墙；主要风险是模型成本与合规；下一步需要 UI 走查与埋点方案。\n请用中文标题输出：会议摘要、关键决策、行动项（表格，负责人/截止时间可留空）、风险与待确认问题。',
-        preset: '请把用户输入整理为会议纪要，输出：会议摘要、关键决策、行动项（负责人/截止时间如未提供则留空）、风险与待确认问题。',
-        diagramMode: 'none',
-      },
-      {
-        title: '项目提案',
-        description: '快速生成可落地的方案/计划/风险。',
-        seed: '写一个项目提案：做一个面向海外用户的文档排版工具站（DocPolish）。\n用户只需输入一句话或一段短内容，就能生成结构清晰、排版专业的 Word 文档并下载 .docx；支持模板入口、可选图片理解、以及可选 Mermaid 图示。\n请明确目标用户、核心价值、MVP 范围、关键指标（如转化/留存）、里程碑计划与主要风险（成本/合规/质量）。',
-        preset: '请把用户输入扩写成项目提案，结构：背景/问题、目标、方案设计、实施计划（里程碑）、资源与预算（估算即可）、风险与对策、结论与下一步。',
-        diagramMode: 'flowchart',
-      },
-      {
-        title: '一页简报',
-        description: '快速输出可分享的一页式 Brief。',
-        seed: '写一份一页简报：为 Shopify 商家做一个 AI 客服助手。\n受众：产品与业务团队（需要可执行的决策材料）。\n请覆盖：核心价值（能带来什么）、范围（做什么/不做什么）、关键指标（例如首响时间、解决率、节省人力）、以及 3 个阶段的里程碑（MVP/Beta/GA）。语言简洁但信息密度高。',
-        preset: '请把用户输入扩写成一页简报，结构：概览、背景、要点、建议、下一步。要求简洁、有可执行的下一步。',
-        diagramMode: 'none',
-      },
-    ]
-    : [
-      {
-        title: 'Polish into a report',
-        description: 'Short notes → a structured report with headings and summary.',
-        seed: 'Write a Word-ready report about “The evolution of smartphones” for a general audience with a professional tone.\nUse this structure: Overview → Timeline (stages) → Key milestones → Today’s use cases → Future trends & challenges → Summary.\nAdd bullet-point takeaways in each section and finish with a 3–5 sentence conclusion.',
-        preset: 'Expand the user input into a report with: Overview, Timeline (stages), Key milestones, Today’s use cases, Future trends & challenges, Summary. Keep it professional and Word-ready.',
-        diagramMode: 'mindmap',
-      },
-      {
-        title: 'Meeting notes',
-        description: 'Turn rough notes into decisions and action items.',
-        seed: 'Create meeting notes for a “Product requirements review” meeting.\nContext: the team wants to ship an MVP in May and needs to lock scope.\nDecisions: start with authentication + paywall. Risks: model cost and compliance. Next steps: UI review and an analytics plan.\nOutput: Executive summary, Key decisions, Action items (table with owner / due date if available), Open questions & risks.',
-        preset: 'Convert the user input into: Executive summary, Key decisions, Action items (owner / due date if available), Open questions & risks.',
-        diagramMode: 'none',
-      },
-      {
-        title: 'Project proposal',
-        description: 'A practical proposal with plan and risks.',
-        seed: 'Write a project proposal for a global document formatting tool (DocPolish).\nUsers can type one sentence or a short paragraph and export a polished .docx. Include template entry points, optional image understanding, and optional Mermaid diagrams.\nMake sure to define target users, MVP scope, success metrics (conversion/retention), milestones, and key risks (cost, compliance, quality).',
-        preset: 'Write a project proposal with: Background, Goals, Proposed solution, Implementation plan (milestones), Resources & budget (estimates), Risks & mitigations, Conclusion & next steps.',
-        diagramMode: 'flowchart',
-      },
-      {
-        title: 'One-page brief',
-        description: 'A concise brief you can share instantly.',
-        seed: 'Write a one-page brief for an “AI customer support assistant for Shopify stores”.\nAudience: product & business team.\nInclude: value proposition, scope (in/out), key metrics (first response time, resolution rate, saved hours), and a 3-phase milestone plan (MVP/Beta/GA). Keep it crisp but information-dense.',
-        preset: 'Create a one-page brief with: Overview, Context, Key points, Recommendations, Next steps. Keep it crisp and actionable.',
-        diagramMode: 'none',
-      },
-    ];
-
-  const applyTemplate = (template: { seed: string; preset: string; diagramMode?: string }) => {
-    setPrompt(template.seed);
-    setTemplatePreset(template.preset);
-    if (template.diagramMode) {
-      setDiagramMode(template.diagramMode);
-    }
-  };
-
-  const normalizeMermaidBlocks = (markdown: string) => {
-    if (!markdown) return markdown;
-    return markdown
-      .replace(/^\s*`mermaid\s*\n([\s\S]*?)\n`\s*$/gim, (_, code: string) => `\`\`\`mermaid\n${code.trim()}\n\`\`\``)
-      .replace(/\n\s*`mermaid\s*\n([\s\S]*?)\n`\s*(?=\n)/g, (_, code: string) => `\n\`\`\`mermaid\n${code.trim()}\n\`\`\`\n`);
-  };
-
   const cleanMarkdown = displayedMarkdown
     .replace(/^```(markdown|html)?\n?/i, '')
     .replace(/\n?```$/i, '')
     .replace(/^html\s*\n/i, '');
 
-  const normalizedMarkdown = normalizeMermaidBlocks(cleanMarkdown);
-
-  const copyFriendlyMarkdown = normalizedMarkdown
+  const copyFriendlyMarkdown = cleanMarkdown
     .replace(/<div\s+align=["']center["']>\s*<h1[^>]*>([\s\S]*?)<\/h1>\s*<\/div>/gi, (_, title: string) => `# ${title.replace(/<[^>]+>/g, '').trim()}`)
     .replace(/<h1[^>]*>([\s\S]*?)<\/h1>/gi, (_, title: string) => `# ${title.replace(/<[^>]+>/g, '').trim()}`);
 
@@ -684,19 +543,11 @@ export default function Home() {
   }, [displayedMarkdown, isFetching, isTyping, autoScroll]);
 
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
-    const target = e.currentTarget;
+    const target = e.target as HTMLDivElement;
+    // Check if user scrolled up
+    // Allow a 50px threshold for bottom detection
     const isAtBottom = target.scrollHeight - target.scrollTop - target.clientHeight < 50;
-    autoScrollNextRef.current = isAtBottom;
-    if (autoScrollRafRef.current !== null) return;
-    autoScrollRafRef.current = window.requestAnimationFrame(() => {
-      autoScrollRafRef.current = null;
-      const next = autoScrollNextRef.current;
-      autoScrollNextRef.current = null;
-      if (typeof next !== 'boolean') return;
-      if (next === autoScrollRef.current) return;
-      autoScrollRef.current = next;
-      setAutoScroll(next);
-    });
+    setAutoScroll(isAtBottom);
   };
   
   // Typewriter effect interval
@@ -835,7 +686,6 @@ export default function Home() {
     setIsFetching(true);
     setError(null);
     setSuccess(false);
-    autoScrollRef.current = true;
     setAutoScroll(true);
     fullTextRef.current = '';
     setDisplayedMarkdown('');
@@ -909,13 +759,8 @@ export default function Home() {
       return;
     }
 
-    const activePreset = templatePreset || defaultPreset;
-    const promptToSend = locale === 'zh'
-      ? `${activePreset}\n\n【用户输入】：\n${prompt.trim()}`
-      : `${activePreset}\n\nUser input:\n${prompt.trim()}`;
-
     const payload = {
-      prompt: promptToSend,
+      prompt,
       content,
       model,
       locale,
@@ -948,7 +793,7 @@ export default function Home() {
       prompt: locale === 'zh'
         ? "【后期优化/修改要求】：\n" + instruction + "\n\n请严格基于下方提供的【当前已有内容】进行修改和润色，不要偏离原意，保持原文未要求修改的部分基本不变。"
         : "Refinement request:\n" + instruction + "\n\nPlease revise and improve the content strictly based on the current draft below. Keep the original meaning and avoid unnecessary changes.",
-      content: normalizedMarkdown, // Use currently generated content as the new base context
+      content: cleanMarkdown, // Use currently generated content as the new base context
       model,
       locale,
       wordCount,
@@ -1173,12 +1018,9 @@ export default function Home() {
         result += match[0];
       } else {
         const renderCode = `%%{init: {'securityLevel': 'strict', 'theme': 'default', 'flowchart': {'htmlLabels': false, 'useMaxWidth': false}}}%%\n${graphCode}`;
-        const uuid = typeof crypto !== 'undefined' && 'randomUUID' in crypto
-          ? crypto.randomUUID()
-          : Math.random().toString(36).slice(2);
-        const { svg } = await mermaid.render(`mermaid-download-${uuid}-${blockNo}`, renderCode);
+        const { svg } = await mermaid.render(`mermaid-download-${crypto.randomUUID()}-${blockNo}`, renderCode);
         const pngDataUrl = await svgToPngDataUrl(svg);
-        result += `![${locale === 'zh' ? '流程图' : 'Diagram'}${blockNo}](${pngDataUrl})`;
+        result += `![流程图${blockNo}](${pngDataUrl})`;
       }
       lastIndex = codeBlockRegex.lastIndex;
       blockNo += 1;
@@ -1193,7 +1035,7 @@ export default function Home() {
     setError(null);
     
     try {
-      let markdownForDownload = normalizeSignatureBlockForDownload(normalizedMarkdown);
+      let markdownForDownload = normalizeSignatureBlockForDownload(cleanMarkdown);
       markdownForDownload = await convertMermaidBlocksToImages(markdownForDownload);
       const response = await fetch('/api/download', {
         method: 'POST',
@@ -1239,30 +1081,54 @@ export default function Home() {
     }
   };
 
-  const markdownOverridesSmall = useMemo(() => createMarkdownOverrides({
-    imageClassName: 'max-h-64',
-    uploadedImages,
-    locale,
-  }), [uploadedImages, locale]);
-
-  const markdownOverridesLarge = useMemo(() => createMarkdownOverrides({
-    imageClassName: 'max-h-96',
-    uploadedImages,
-    locale,
-  }), [uploadedImages, locale]);
+  const createMarkdownOverrides = (imageClassName: string) => ({
+    img: {
+      component: ({ alt, src, ...props }: React.ImgHTMLAttributes<HTMLImageElement>) => {
+        let resolvedSrc = src;
+        const matchedImg = uploadedImages.find(img => img.id === src);
+        if (matchedImg) {
+          resolvedSrc = matchedImg.base64;
+        }
+        const ImgElement = 'img';
+        return (
+          <ImgElement
+            alt={alt}
+            src={resolvedSrc}
+            className={cn("rounded-lg shadow-sm border border-gray-200 object-contain mx-auto", imageClassName)}
+            {...props}
+          />
+        );
+      }
+    },
+    pre: {
+      component: ({ children, ...props }: React.HTMLAttributes<HTMLPreElement>) => {
+        const firstChild = Array.isArray(children) ? children[0] : children;
+        if (firstChild && typeof firstChild === 'object' && 'props' in firstChild) {
+          const codeNode = firstChild as React.ReactElement<{ className?: string; children?: React.ReactNode }>;
+          const className = codeNode.props.className || '';
+          const codeContent = Array.isArray(codeNode.props.children)
+            ? codeNode.props.children.join('')
+            : String(codeNode.props.children ?? '');
+          if (className.includes('language-mermaid')) {
+            return <MermaidDiagram code={codeContent} />;
+          }
+          if (/^mermaid\s*\n/i.test(codeContent)) {
+            return <MermaidDiagram code={codeContent.replace(/^mermaid\s*\n/i, '')} />;
+          }
+        }
+        return <pre {...props}>{children}</pre>;
+      }
+    }
+  });
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-white via-gray-50 to-white flex flex-col relative isolate">
-      <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden -z-10">
-        <div className="absolute -top-32 -left-32 h-[520px] w-[520px] rounded-full bg-gradient-to-br from-indigo-300/30 via-violet-300/20 to-transparent blur-3xl" />
-        <div className="absolute -top-40 -right-40 h-[560px] w-[560px] rounded-full bg-gradient-to-br from-sky-300/25 via-indigo-300/20 to-transparent blur-3xl" />
-      </div>
+    <div className="h-screen bg-gray-50/50 flex flex-col overflow-hidden">
       {/* Header */}
-      <header className="bg-white/70 backdrop-blur border-b border-gray-200/60 shrink-0 z-10 relative">
+      <header className="bg-white border-b border-gray-200 shrink-0 z-10">
         <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2 text-indigo-600">
             <Wand2 className="w-6 h-6" />
-            <h1 className="text-xl font-bold tracking-tight bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent">{text('appTitle')}</h1>
+            <h1 className="text-xl font-bold text-gray-900">{text('appTitle')}</h1>
           </div>
           <div className="flex items-center gap-3">
             <div className="rounded-lg bg-gray-100 px-3 py-1.5 text-sm font-medium text-indigo-700">
@@ -1290,42 +1156,61 @@ export default function Home() {
                 中文
               </button>
             </div>
+            <div className="px-3 py-1 rounded-full bg-indigo-50 border border-indigo-200 text-indigo-700 text-sm font-semibold hidden md:block">
+              {text('badgeBeta')}
+            </div>
           </div>
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="flex-1">
-        <div className="max-w-[1600px] mx-auto px-4 pt-6">
-          <motion.div
-            {...(reduceMotion
-              ? {}
-              : { initial: false, animate: { opacity: 1, y: 0 }, transition: { duration: 0.5, ease: [0.22, 1, 0.36, 1] } })}
-            className="bg-gradient-to-b from-white to-indigo-50/30 border border-gray-200/70 rounded-2xl p-6 md:p-8 shadow-[0_10px_30px_rgba(15,23,42,0.06)] relative"
-          >
-            <div className="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
-              <div className="max-w-2xl">
-                <h2 className="text-2xl md:text-4xl font-semibold text-gray-900 tracking-tight leading-tight">{text('heroTitle')}</h2>
-                <p className="mt-3 text-sm md:text-base text-gray-600 leading-relaxed">{text('heroSubtitle')}</p>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <span className="inline-flex items-center rounded-full bg-white/70 backdrop-blur px-3 py-1 text-xs font-semibold text-gray-700 border border-gray-200/70 shadow-sm">{text('trustNoSignup')}</span>
-                <span className="inline-flex items-center rounded-full bg-white/70 backdrop-blur px-3 py-1 text-xs font-semibold text-gray-700 border border-gray-200/70 shadow-sm">{text('trustDocx')}</span>
-                <span className="inline-flex items-center rounded-full bg-white/70 backdrop-blur px-3 py-1 text-xs font-semibold text-gray-700 border border-gray-200/70 shadow-sm">{text('trustPrivacy')}</span>
-              </div>
+      <main className="flex-1 min-h-0 overflow-y-auto lg:overflow-hidden">
+        <div className="max-w-[1600px] mx-auto px-4 py-6 h-full flex flex-col gap-4">
+          <div className="shrink-0">
+            <div className="rounded-2xl border border-gray-200 bg-white shadow-sm p-5">
+              <details className="group">
+                <summary className="list-none cursor-pointer select-none">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="min-w-0">
+                      <div className="text-base md:text-lg font-semibold text-gray-900">{text('diffTitle')}</div>
+                      <div className="mt-1 text-sm text-gray-600">{text('diffSubtitle')}</div>
+                    </div>
+                    <div className="shrink-0 inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm font-medium text-gray-800 hover:bg-gray-100 transition-colors">
+                      <span className="group-open:hidden">{text('diffToggleShow')}</span>
+                      <span className="hidden group-open:inline">{text('diffToggleHide')}</span>
+                      <ChevronDown className="w-4 h-4 text-gray-500 group-open:hidden" />
+                      <ChevronUp className="w-4 h-4 text-gray-500 hidden group-open:block" />
+                    </div>
+                  </div>
+                </summary>
+                <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
+                    <div className="text-sm font-semibold text-gray-900">{text('diffLeftTitle')}</div>
+                    <div className="mt-1 text-xs text-gray-600">{text('diffLeftP1')}</div>
+                    <ul className="mt-3 space-y-2 text-sm text-gray-700">
+                      <li className="flex gap-2"><span className="mt-0.5 h-1.5 w-1.5 rounded-full bg-gray-400 shrink-0" />{text('diffLeftB1')}</li>
+                      <li className="flex gap-2"><span className="mt-0.5 h-1.5 w-1.5 rounded-full bg-gray-400 shrink-0" />{text('diffLeftB2')}</li>
+                      <li className="flex gap-2"><span className="mt-0.5 h-1.5 w-1.5 rounded-full bg-gray-400 shrink-0" />{text('diffLeftB3')}</li>
+                    </ul>
+                  </div>
+                  <div className="rounded-xl border border-indigo-200 bg-indigo-50/40 p-4">
+                    <div className="text-sm font-semibold text-indigo-900">{text('diffRightTitle')}</div>
+                    <div className="mt-1 text-xs text-indigo-800/80">{text('diffRightP1')}</div>
+                    <ul className="mt-3 space-y-2 text-sm text-indigo-900">
+                      <li className="flex gap-2"><span className="mt-0.5 h-1.5 w-1.5 rounded-full bg-indigo-500 shrink-0" />{text('diffRightB1')}</li>
+                      <li className="flex gap-2"><span className="mt-0.5 h-1.5 w-1.5 rounded-full bg-indigo-500 shrink-0" />{text('diffRightB2')}</li>
+                      <li className="flex gap-2"><span className="mt-0.5 h-1.5 w-1.5 rounded-full bg-indigo-500 shrink-0" />{text('diffRightB3')}</li>
+                    </ul>
+                  </div>
+                </div>
+              </details>
             </div>
-          </motion.div>
-        </div>
-        <div className="max-w-[1600px] mx-auto px-4 py-6 flex flex-col lg:flex-row gap-6">
-          
+          </div>
+
+          <div className="flex-1 min-h-0 flex flex-col lg:flex-row gap-6">
           {/* Left Column: Advanced Settings */}
-          <div className="w-full lg:w-[25%] lg:pr-2 pb-6 space-y-6">
-            <motion.div
-              {...(reduceMotion
-                ? {}
-                : { initial: false, animate: { opacity: 1, y: 0 }, transition: { duration: 0.45, delay: 0.05, ease: [0.22, 1, 0.36, 1] } })}
-              className="bg-white/80 backdrop-blur rounded-xl shadow-[0_10px_30px_rgba(15,23,42,0.05)] border border-gray-200/70 p-6"
-            >
+          <div className="w-full lg:w-[25%] lg:h-full lg:overflow-y-auto lg:pr-2 pb-6 space-y-6 custom-scrollbar">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
               <h2 className="text-lg font-semibold text-gray-800 mb-6 flex items-center gap-2">
                 <SlidersHorizontal className="w-5 h-5 text-indigo-500" />
                 {text('advancedTitle')}
@@ -1427,15 +1312,10 @@ export default function Home() {
                   <p className="mt-1 text-xs text-gray-500">{text('diagramHint')}</p>
                 </div>
               </div>
-            </motion.div>
+            </div>
 
             {/* Author & Date Settings Card */}
-            <motion.div
-              {...(reduceMotion
-                ? {}
-                : { initial: false, animate: { opacity: 1, y: 0 }, transition: { duration: 0.45, delay: 0.1, ease: [0.22, 1, 0.36, 1] } })}
-              className="mt-6 bg-white/80 backdrop-blur rounded-xl shadow-[0_10px_30px_rgba(15,23,42,0.05)] border border-gray-200/70 p-6"
-            >
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
               <h2 className="text-lg font-semibold text-gray-800 mb-6 flex items-center gap-2">
                 <FileText className="w-5 h-5 text-indigo-500" />
                 {text('signatureTitle')}
@@ -1481,18 +1361,13 @@ export default function Home() {
                   </div>
                 )}
               </div>
-            </motion.div>
+            </div>
           </div>
 
           {/* Middle Column: Inputs */}
-          <div className="w-full lg:w-[45%] lg:pr-2 pb-6 space-y-6">
+          <div className="w-full lg:w-[45%] lg:h-full lg:overflow-y-auto lg:pr-2 pb-6 space-y-6 custom-scrollbar">
             {/* Settings Card */}
-          <motion.div
-            {...(reduceMotion
-              ? {}
-              : { initial: false, animate: { opacity: 1, y: 0 }, transition: { duration: 0.45, delay: 0.1, ease: [0.22, 1, 0.36, 1] } })}
-            className="bg-white/80 backdrop-blur rounded-xl shadow-[0_10px_30px_rgba(15,23,42,0.05)] border border-gray-200/70 p-6"
-          >
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <div className="flex items-center gap-2 mb-4 text-gray-800">
               <Settings className="w-5 h-5 text-gray-500" />
               <h2 className="text-lg font-semibold">{text('generationSettings')}</h2>
@@ -1509,7 +1384,7 @@ export default function Home() {
                 >
                   {visibleModels.map((m) => (
                     <option key={m.value} value={m.value}>
-                      {(locale === 'zh' ? m.labelZh : m.labelEn)}{m.supportsImage ? (locale === 'zh' ? ' · 支持图片' : ' · Vision') : (locale === 'zh' ? ' · 仅文本' : ' · Text')}
+                      {m.label}{m.supportsImage ? (locale === 'zh' ? ' · 支持图片' : ' · Vision') : (locale === 'zh' ? ' · 仅文本' : ' · Text')}
                     </option>
                   ))}
                 </select>
@@ -1518,28 +1393,6 @@ export default function Home() {
                     {text('modelHintVisionOnly')}
                   </p>
                 )}
-              </div>
-              <div className="rounded-xl border border-gray-200/70 bg-white/60 p-4 shadow-sm">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <div className="text-sm font-semibold text-gray-900">{text('templatesTitle')}</div>
-                    <div className="mt-0.5 text-xs text-gray-600">{text('templatesHint')}</div>
-                  </div>
-                </div>
-                <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {templates.map((t) => (
-                    <motion.button
-                      key={t.title}
-                      type="button"
-                      onClick={() => applyTemplate(t)}
-                      {...(reduceMotion ? {} : { whileHover: { y: -2 }, whileTap: { scale: 0.99 } })}
-                      className="text-left rounded-lg border border-gray-200/70 bg-white/80 backdrop-blur px-3 py-2 hover:border-indigo-300/80 hover:bg-indigo-50/30 transition-colors shadow-sm hover:shadow-md"
-                    >
-                      <div className="text-sm font-medium text-gray-900">{t.title}</div>
-                      <div className="mt-0.5 text-xs text-gray-600">{t.description}</div>
-                    </motion.button>
-                  ))}
-                </div>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -1554,15 +1407,10 @@ export default function Home() {
                 />
               </div>
             </div>
-          </motion.div>
+          </div>
 
           {/* Content Card */}
-          <motion.div
-            {...(reduceMotion
-              ? {}
-              : { initial: false, animate: { opacity: 1, y: 0 }, transition: { duration: 0.45, delay: 0.15, ease: [0.22, 1, 0.36, 1] } })}
-            className="bg-white/80 backdrop-blur rounded-xl shadow-[0_10px_30px_rgba(15,23,42,0.05)] border border-gray-200/70 overflow-hidden"
-          >
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
             <div 
               className="p-6 cursor-pointer hover:bg-gray-50 transition-colors flex items-center justify-between"
               onClick={() => setIsContentOpen(!isContentOpen)}
@@ -1620,14 +1468,9 @@ export default function Home() {
                 />
               </div>
             )}
-          </motion.div>
+          </div>
           {/* Image Upload Section */}
-            <motion.div
-              {...(reduceMotion
-                ? {}
-                : { initial: false, animate: { opacity: 1, y: 0 }, transition: { duration: 0.45, delay: 0.18, ease: [0.22, 1, 0.36, 1] } })}
-              className="bg-white/80 backdrop-blur rounded-xl shadow-[0_10px_30px_rgba(15,23,42,0.05)] border border-gray-200/70 p-6"
-            >
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
               <div className="flex flex-col mb-4 gap-2">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 text-gray-800">
@@ -1681,28 +1524,22 @@ export default function Home() {
               onChange={handleImageUpload}
               className="hidden"
             />
-          </motion.div>
-        </div>
+          </div>
+          </div>
 
           {/* Right Column: Actions & Status */}
-          <div className="w-full lg:w-[40%] lg:pr-2 pb-6 flex flex-col">
-            <motion.div
-              {...(reduceMotion
-                ? {}
-                : { initial: false, animate: { opacity: 1, y: 0 }, transition: { duration: 0.45, delay: 0.2, ease: [0.22, 1, 0.36, 1] } })}
-              className="bg-white/80 backdrop-blur rounded-xl shadow-[0_10px_30px_rgba(15,23,42,0.05)] border border-gray-200/70 p-6 flex flex-col min-h-max"
-            >
+          <div className="w-full lg:w-[40%] lg:h-full lg:overflow-y-auto lg:pr-2 pb-6 flex flex-col custom-scrollbar">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 flex flex-col min-h-max">
               <h2 className="text-lg font-semibold text-gray-800 mb-4 shrink-0">{locale === 'zh' ? '操作面板' : 'Actions'}</h2>
               
-              <motion.button
+              <button
                 onClick={handleGenerate}
                 disabled={isFetching || isTyping}
-                {...(reduceMotion ? {} : { whileHover: { y: -1 }, whileTap: { scale: 0.99 } })}
                 className={cn(
-                  "w-full flex items-center justify-center gap-2 py-3 px-4 rounded-lg font-medium text-white transition-all shadow-sm shrink-0 bg-gradient-to-r from-indigo-600 to-violet-600",
+                  "w-full flex items-center justify-center gap-2 py-3 px-4 rounded-lg font-medium text-white transition-all shadow-sm shrink-0",
                   (isFetching || isTyping) 
-                    ? "opacity-70 cursor-not-allowed" 
-                    : "hover:shadow-md"
+                    ? "bg-indigo-400 cursor-not-allowed" 
+                    : "bg-indigo-600 hover:bg-indigo-700 hover:shadow"
                 )}
               >
                 {isFetching || isTyping ? (
@@ -1716,7 +1553,7 @@ export default function Home() {
                     {locale === 'zh' ? '开始排版并生成' : 'Generate & Format'}
                   </>
                 )}
-              </motion.button>
+              </button>
 
               <div className="text-xs text-gray-500 text-center mt-3 shrink-0">
                 {locale === 'zh' ? '点击开始排版并生成即表示您同意本站的' : 'By using this site, you agree to the'}
@@ -1727,7 +1564,7 @@ export default function Home() {
 
               {/* Generated Content View */}
               {(displayedMarkdown || isFetching || isTyping) && (
-                <div className="mt-6 border border-gray-200 rounded-lg overflow-hidden bg-gray-50 flex flex-col min-h-[300px] max-h-[60vh] lg:max-h-[520px] transition-all">
+                <div className="mt-6 border border-gray-200 rounded-lg overflow-hidden bg-gray-50 flex flex-col flex-1 min-h-[300px] transition-all">
                   <div className="bg-gray-100 border-b border-gray-200 px-3 py-2 flex items-center justify-between shrink-0">
                     <span className="text-xs font-medium text-gray-600">{locale === 'zh' ? '生成预览' : 'Preview'}</span>
                     <button 
@@ -1746,10 +1583,10 @@ export default function Home() {
                     {displayedMarkdown ? (
                       <Markdown
                         options={{
-                          overrides: markdownOverridesSmall
+                          overrides: createMarkdownOverrides('max-h-64')
                         }}
                       >
-                        {normalizedMarkdown}
+                        {cleanMarkdown}
                       </Markdown>
                     ) : (
                       <div className="text-gray-400 flex items-center justify-center h-full w-full gap-2 animate-pulse">
@@ -1827,21 +1664,20 @@ export default function Home() {
                     <p className="text-sm">{text('generateSuccess')}</p>
                   </div>
                 )}
-              </div>
-          </motion.div>
-        </div>
-        </div>
 
-        <div className="max-w-[1600px] mx-auto px-4 pb-10">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <h3 className="text-sm font-medium text-gray-900 mb-2">{locale === 'zh' ? '使用说明与免责声明' : 'Usage & Disclaimer'}</h3>
-            <ul className="text-sm text-gray-600 space-y-2 list-disc list-inside pl-1">
-              <li><strong>{locale === 'zh' ? '直接生成：' : 'Generate:'}</strong> {locale === 'zh' ? '输入内容并点击生成，即可获得结构清晰、可下载的 Word 文档。' : 'Paste content and click Generate to get a well-structured draft and a downloadable .docx.'}</li>
-              <li><strong>{locale === 'zh' ? '排版美化：' : 'Beautify:'}</strong> {locale === 'zh' ? '粘贴已有内容或上传 .docx，我们会自动重排结构与表达。' : 'Paste existing content or upload a .docx — we will rewrite and format it automatically.'}</li>
-              <li>{locale === 'zh' ? '生成速度取决于内容长度与所选模型，请耐心等待。' : 'Generation speed depends on content length and the selected model. Please wait.'}</li>
-              <li>{locale === 'zh' ? '请勿上传敏感信息（身份证、银行卡、账号密码、商业机密等）。' : 'Do not upload sensitive information (IDs, bank details, passwords, trade secrets, etc.).'}</li>
-            </ul>
+                <div className="pt-6 border-t border-gray-100 pb-4">
+                  <h3 className="text-sm font-medium text-gray-900 mb-2">{locale === 'zh' ? '使用说明与免责声明' : 'Usage & Disclaimer'}</h3>
+                  <ul className="text-sm text-gray-600 space-y-2 list-disc list-inside pl-1 mb-4">
+                    <li><strong>{locale === 'zh' ? '直接生成：' : 'Generate:'}</strong> {locale === 'zh' ? '输入要求并点击生成，即可获得结构清晰、可下载的 Word 文档。' : 'Enter instructions and click Generate to get a well-structured draft and a downloadable .docx.'}</li>
+                    <li><strong>{locale === 'zh' ? '排版美化：' : 'Beautify:'}</strong> {locale === 'zh' ? '粘贴已有内容或上传 .docx，并在要求中说明目标风格与结构。' : 'Paste existing content or upload a .docx, then describe the desired style and structure.'}</li>
+                    <li>{locale === 'zh' ? '生成速度取决于内容长度与所选模型，请耐心等待。' : 'Generation speed depends on content length and the selected model. Please wait.'}</li>
+                    <li>{locale === 'zh' ? '请勿上传敏感信息（身份证、银行卡、账号密码、商业机密等）。' : 'Do not upload sensitive information (IDs, bank details, passwords, trade secrets, etc.).'}</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
           </div>
+        </div>
         </div>
       </main>
 
@@ -2034,10 +1870,10 @@ export default function Home() {
                 <div className="word-preview-page prose prose-base">
                   <Markdown
                     options={{
-                      overrides: markdownOverridesLarge
+                      overrides: createMarkdownOverrides('max-h-96')
                     }}
                   >
-                    {normalizedMarkdown}
+                    {cleanMarkdown}
                   </Markdown>
                 </div>
               ) : null}
