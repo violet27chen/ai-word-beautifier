@@ -201,9 +201,38 @@ export default function Home() {
     setLocale(resolveInitialLocale());
   }, []);
 
+  const copyText = async (value: string) => {
+    if (typeof window === 'undefined') return false;
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(value);
+        return true;
+      }
+    } catch {}
+
+    try {
+      const textarea = document.createElement('textarea');
+      textarea.value = value;
+      textarea.setAttribute('readonly', '');
+      textarea.style.position = 'fixed';
+      textarea.style.top = '-9999px';
+      textarea.style.left = '-9999px';
+      document.body.appendChild(textarea);
+      textarea.select();
+      textarea.setSelectionRange(0, textarea.value.length);
+      const ok = document.execCommand('copy');
+      textarea.blur();
+      document.body.removeChild(textarea);
+      return ok;
+    } catch {
+      return false;
+    }
+  };
+
   const handleCopy = async () => {
     try {
-      await navigator.clipboard.writeText(copyFriendlyMarkdown);
+      const ok = await copyText(copyFriendlyMarkdown);
+      if (!ok) throw new Error('copy_failed');
       setIsCopied(true);
       setTimeout(() => setIsCopied(false), 2000);
     } catch (err) {
@@ -215,7 +244,8 @@ export default function Home() {
 
   const handleCopyDockerCommand = async () => {
     try {
-      await navigator.clipboard.writeText(dockerCommand);
+      const ok = await copyText(dockerCommand);
+      if (!ok) throw new Error('copy_failed');
       setIsDockerCopied(true);
       setTimeout(() => setIsDockerCopied(false), 2000);
     } catch (err) {
