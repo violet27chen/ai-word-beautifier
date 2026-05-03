@@ -193,6 +193,7 @@ export default function Home() {
   const [isAgreementModalOpen, setIsAgreementModalOpen] = useState(false);
   // const [isDonateModalOpen, setIsDonateModalOpen] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
+  const [isDockerCopied, setIsDockerCopied] = useState(false);
   // const [isUsdtCopied, setIsUsdtCopied] = useState(false);
   // const hasUsdtDonationInfo = Boolean(USDT_DONATION_NETWORK && USDT_DONATION_ADDRESS);
 
@@ -205,6 +206,18 @@ export default function Home() {
       await navigator.clipboard.writeText(copyFriendlyMarkdown);
       setIsCopied(true);
       setTimeout(() => setIsCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy text:', err);
+    }
+  };
+
+  const dockerCommand = 'docker pull docker.qiyuan.icu/library/nginx:latest';
+
+  const handleCopyDockerCommand = async () => {
+    try {
+      await navigator.clipboard.writeText(dockerCommand);
+      setIsDockerCopied(true);
+      setTimeout(() => setIsDockerCopied(false), 2000);
     } catch (err) {
       console.error('Failed to copy text:', err);
     }
@@ -1680,6 +1693,38 @@ export default function Home() {
         </div>
         </div>
       </main>
+
+      {locale === 'zh' && (
+        <div className="bg-gray-50/50 border-t border-gray-100">
+          <div className="max-w-7xl mx-auto px-4 py-8">
+            <div className="rounded-xl border border-gray-200 bg-white px-5 py-4">
+              <div className="text-sm font-semibold text-gray-900">开发者工具</div>
+              <div className="mt-1 text-xs text-gray-600">Docker 镜像加速</div>
+              <p className="mt-3 text-xs leading-relaxed text-gray-600">
+                国内服务器拉取 Docker Hub 镜像时，将镜像地址前缀替换为 <span className="font-mono text-[11px] text-gray-800">https://docker.qiyuan.icu</span> 即可加速。
+              </p>
+              <div className="mt-3 flex items-start gap-3 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2">
+                <div className="min-w-0 flex-1">
+                  <code className="block font-mono text-[11px] leading-relaxed text-gray-800 break-all">{dockerCommand}</code>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleCopyDockerCommand}
+                  className={cn(
+                    'shrink-0 inline-flex items-center gap-1 rounded-md border px-2.5 py-1.5 text-xs font-medium transition-colors',
+                    isDockerCopied
+                      ? 'border-green-200 bg-green-50 text-green-700'
+                      : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-100'
+                  )}
+                >
+                  {isDockerCopied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                  {isDockerCopied ? '已复制' : '复制'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Footer */}
       <footer className="bg-white border-t border-gray-200 shrink-0 py-4">
