@@ -191,8 +191,10 @@ export default function Home() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isPrivacyModalOpen, setIsPrivacyModalOpen] = useState(false);
   const [isAgreementModalOpen, setIsAgreementModalOpen] = useState(false);
+  const [isDevToolsModalOpen, setIsDevToolsModalOpen] = useState(false);
   // const [isDonateModalOpen, setIsDonateModalOpen] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
+  const [isDockerCopied, setIsDockerCopied] = useState(false);
   // const [isUsdtCopied, setIsUsdtCopied] = useState(false);
   // const hasUsdtDonationInfo = Boolean(USDT_DONATION_NETWORK && USDT_DONATION_ADDRESS);
 
@@ -200,11 +202,53 @@ export default function Home() {
     setLocale(resolveInitialLocale());
   }, []);
 
+  const copyText = async (value: string) => {
+    if (typeof window === 'undefined') return false;
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(value);
+        return true;
+      }
+    } catch {}
+
+    try {
+      const textarea = document.createElement('textarea');
+      textarea.value = value;
+      textarea.setAttribute('readonly', '');
+      textarea.style.position = 'fixed';
+      textarea.style.top = '-9999px';
+      textarea.style.left = '-9999px';
+      document.body.appendChild(textarea);
+      textarea.select();
+      textarea.setSelectionRange(0, textarea.value.length);
+      const ok = document.execCommand('copy');
+      textarea.blur();
+      document.body.removeChild(textarea);
+      return ok;
+    } catch {
+      return false;
+    }
+  };
+
   const handleCopy = async () => {
     try {
-      await navigator.clipboard.writeText(copyFriendlyMarkdown);
+      const ok = await copyText(copyFriendlyMarkdown);
+      if (!ok) throw new Error('copy_failed');
       setIsCopied(true);
       setTimeout(() => setIsCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy text:', err);
+    }
+  };
+
+  const dockerCommand = 'docker pull docker.qiyuan.icu/library/nginx:latest';
+
+  const handleCopyDockerCommand = async () => {
+    try {
+      const ok = await copyText(dockerCommand);
+      if (!ok) throw new Error('copy_failed');
+      setIsDockerCopied(true);
+      setTimeout(() => setIsDockerCopied(false), 2000);
     } catch (err) {
       console.error('Failed to copy text:', err);
     }
@@ -1687,6 +1731,9 @@ export default function Home() {
           <p>{text('footerBrand')}</p>
           <p className="hidden sm:block">|</p>
           <div className="flex items-center gap-4">
+            {locale === 'zh' && (
+              <button onClick={() => setIsDevToolsModalOpen(true)} className="hover:text-gray-700 transition-colors">开发者工具</button>
+            )}
             <button onClick={() => setIsAgreementModalOpen(true)} className="hover:text-indigo-600 transition-colors">{text('agreement')}</button>
             <button onClick={() => setIsPrivacyModalOpen(true)} className="hover:text-indigo-600 transition-colors">{text('privacy')}</button>
           </div>
@@ -1763,6 +1810,46 @@ export default function Home() {
           </div>
         </div>
       )} */}
+
+      {locale === 'zh' && isDevToolsModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[80vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between p-4 border-b border-gray-100">
+              <h3 className="font-semibold text-gray-800 text-lg">开发者工具</h3>
+              <button
+                onClick={() => setIsDevToolsModalOpen(false)}
+                className="p-2 bg-gray-100 hover:bg-gray-200 rounded-full text-gray-600 transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="p-6 overflow-y-auto flex-1 text-gray-700 custom-scrollbar">
+              <div className="text-xs font-medium text-gray-600">Docker 镜像加速</div>
+              <p className="mt-3 text-xs leading-relaxed text-gray-600">
+                国内服务器拉取 Docker Hub 镜像时，将镜像地址前缀替换为 <span className="font-mono text-[11px] text-gray-800">https://docker.qiyuan.icu</span> 即可加速。
+              </p>
+              <div className="mt-3 flex items-start gap-3 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2">
+                <div className="min-w-0 flex-1">
+                  <code className="block font-mono text-[11px] leading-relaxed text-gray-800 break-all">{dockerCommand}</code>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleCopyDockerCommand}
+                  className={cn(
+                    'shrink-0 inline-flex items-center gap-1 rounded-md border px-2.5 py-1.5 text-xs font-medium transition-colors',
+                    isDockerCopied
+                      ? 'border-green-200 bg-green-50 text-green-700'
+                      : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-100'
+                  )}
+                >
+                  {isDockerCopied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                  {isDockerCopied ? '已复制' : '复制'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Privacy Policy Modal */}
       {isPrivacyModalOpen && (
