@@ -154,14 +154,8 @@ function MermaidDiagram({ code }: { code: string }) {
         const renderId = `mermaid-${crypto.randomUUID()}`;
         const { svg: renderedSvg } = await mermaid.render(renderId, chartCode);
         if (!active) return;
-        // Mermaid v11 may return SVG with error text instead of throwing
-        if (renderedSvg && /class="error-icon"|class="error-text"|Syntax error in text/i.test(renderedSvg)) {
-          setSvg('');
-          setRenderError(locale === 'zh' ? '图示渲染失败，已跳过该图示。' : 'Diagram rendering failed, skipped.');
-        } else {
-          setSvg(renderedSvg);
-          setRenderError('');
-        }
+        setSvg(renderedSvg);
+        setRenderError('');
       } catch {
         if (!active) return;
         setSvg('');
@@ -179,7 +173,7 @@ function MermaidDiagram({ code }: { code: string }) {
   }
 
   if (renderError) {
-    return <div className="my-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">{renderError}</div>;
+    return null; // 静默跳过渲染失败的图示
   }
   if (!svg) {
     return <div className="my-3 rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-500">{locale === 'zh' ? '图示渲染中...' : 'Rendering diagram...'}</div>;

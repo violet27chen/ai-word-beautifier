@@ -92,6 +92,13 @@ body {
   height: auto;
 }
 
+/* 隐藏 Mermaid 渲染错误信息（图示正常显示，错误文字不显示） */
+.mermaid-diagram svg .error-icon,
+.mermaid-diagram svg .error-text,
+.mermaid-diagram svg text.error-text {
+  display: none !important;
+}
+
 .mermaid-diagram p {
   margin: 0;
   line-height: 1.35;
