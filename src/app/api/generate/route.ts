@@ -322,7 +322,7 @@ export async function POST(req: Request) {
     const mimoOpenai = new MimoOpenAI({
       apiKey: process.env.MIMO_API_KEY || '',
       mimoApiKey: process.env.MIMO_API_KEY || '',
-      baseURL: 'https://api.xiaomimimo.com/v1',
+      baseURL: 'https://token-plan-cn.xiaomimimo.com/v1',
     });
 
     const doubaoOpenai = new OpenAI({
