@@ -1,0 +1,25 @@
+{
+  "envId": "your-env-id",
+  "version": "2.0",
+  "$schema": "https://framework-1258016615.tcloudbaseapp.com/schema/latest.json",
+  "cloudrun": {
+    "service": {
+      "name": "ai-word",
+      "cpu": "0.5",
+      "mem": "1G",
+      "minNum": 0,
+      "maxNum": 5,
+      "concurrency": 50,
+      "envVariables": {
+        "NODE_ENV": "production",
+        "PORT": "80"
+      },
+      "containerPort": 80,
+      "imageInfo": {
+        "imageUrl": "",
+        "repositoryName": "ai-word",
+        "tagName": "latest"
+      }
+    }
+  }
+}
