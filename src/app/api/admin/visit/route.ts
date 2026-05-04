@@ -15,6 +15,6 @@ export async function POST(req: Request) {
   const userAgent = req.headers.get('user-agent') || 'unknown-ua';
   const ip = getClientIp(req);
   const visitorKey = buildVisitorKey(ip, userAgent);
-  trackAdminVisit({ visitorKey });
+  await trackAdminVisit({ visitorKey });
   return NextResponse.json({ ok: true });
 }

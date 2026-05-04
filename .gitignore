@@ -7,3 +7,7 @@ dist/
 .env
 .env.*
 .DS_Store
+.env.deploy
+
+# SQLite (replaced by MySQL)
+.data/

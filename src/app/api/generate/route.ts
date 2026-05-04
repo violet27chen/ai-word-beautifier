@@ -755,7 +755,7 @@ Available image IDs:\n`
     // due to long system prompts, complex constraints, or high load.
     // The stream is passed down immediately to the client.
     // Return the stream response with appropriate CORS and cache headers
-    trackAdminEvent({
+    await trackAdminEvent({
       type: 'generate',
       status: 'success',
       model: selectedModel,
@@ -773,7 +773,7 @@ Available image IDs:\n`
   } catch (error) {
     console.error('API Error:', error);
     const err = error as Error;
-    trackAdminEvent({
+    await trackAdminEvent({
       type: 'generate',
       status: 'error',
       errorMessage: err.message?.slice(0, 200) || l('生成失败', 'Request failed'),

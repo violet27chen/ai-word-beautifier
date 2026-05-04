@@ -1,9 +1,6 @@
 # ---- Build Stage ----
 FROM node:20-alpine AS builder
 
-# better-sqlite3 需要编译工具
-RUN apk add --no-cache python3 make g++
-
 WORKDIR /app
 
 # 先复制依赖文件，利用 Docker 缓存
@@ -16,14 +13,14 @@ COPY . .
 # 构建 Next.js
 RUN npm run build
 
+# 清理构建缓存（生产运行不需要）
+RUN rm -rf .next/cache .next/dev .next/trace .next/trace-build
+
 # 清理 devDependencies
 RUN npm prune --production
 
 # ---- Production Stage ----
 FROM node:20-alpine
-
-# better-sqlite3 运行时需要
-RUN apk add --no-cache libstdc++
 
 WORKDIR /app
 
@@ -32,7 +29,6 @@ COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package.json ./
 COPY --from=builder /app/public ./public
-COPY --from=builder /app/.data ./.data
 
 # CloudBase 云托管默认端口
 EXPOSE 80

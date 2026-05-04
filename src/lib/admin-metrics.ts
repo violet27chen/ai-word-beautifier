@@ -14,23 +14,23 @@ type AdminEvent = {
   createdAt: string;
 };
 
-export function trackAdminEvent(input: Omit<AdminEvent, 'id' | 'createdAt'>) {
-  insertAdminEvent(input);
+export async function trackAdminEvent(input: Omit<AdminEvent, 'id' | 'createdAt'>) {
+  await insertAdminEvent(input);
 }
 
-export function trackAdminVisit(input: { visitorKey: string; dateKey?: string }) {
-  insertAdminVisit(input);
+export async function trackAdminVisit(input: { visitorKey: string; dateKey?: string }) {
+  await insertAdminVisit(input);
 }
 
-export function getAdminOverview() {
-  const aggregates = getAdminAggregates();
+export async function getAdminOverview() {
+  const aggregates = await getAdminAggregates();
   const totalRequests = aggregates.generateTotal + aggregates.downloadTotal;
-  const recentEvents = getRecentAdminEvents(80).map((item) => ({
+  const recentEvents = (await getRecentAdminEvents(80)).map((item) => ({
     ...item,
     hasImages: Boolean(item.hasImages),
   }));
   return {
-    startedAt: getAdminStartedAt(),
+    startedAt: await getAdminStartedAt(),
     totalRequests,
     generate: {
       total: aggregates.generateTotal,

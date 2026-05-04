@@ -33,6 +33,6 @@ export async function GET(req: Request) {
     project: 'AI Word 排版美化助手',
     now: new Date().toISOString(),
     envStatus: buildEnvStatus(),
-    overview: getAdminOverview(),
+    overview: await getAdminOverview(),
   });
 }

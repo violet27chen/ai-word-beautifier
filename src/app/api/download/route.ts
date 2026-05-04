@@ -104,7 +104,7 @@ export async function POST(req: Request) {
     const asciiFileName = `${toAsciiFallbackFileName(safeTitle)}.docx`;
     const encodedFileName = encodeURIComponent(fileName);
 
-    trackAdminEvent({
+    await trackAdminEvent({
       type: 'download',
       status: 'success',
       markdownLength: String(markdownOutput || '').length,
@@ -119,7 +119,7 @@ export async function POST(req: Request) {
   } catch (error) {
     console.error('Download API Error:', error);
     const err = error as Error;
-    trackAdminEvent({
+    await trackAdminEvent({
       type: 'download',
       status: 'error',
       errorMessage: err.message?.slice(0, 200) || '下载失败',
