@@ -113,11 +113,29 @@ function loadMermaid(): Promise<MermaidRenderer> {
   return mermaidLoaderPromise;
 }
 
+/** Clean up common Mermaid syntax issues from AI-generated content */
+function sanitizeMermaidCode(raw: string): string {
+  let code = raw.trim();
+  // Remove leading/trailing whitespace
+  code = code.replace(/^\s+|\s+$/g, '');
+  // Fix common issue: unquoted Chinese/special-char node labels
+  // e.g. A[开始] -> A["开始"], A(处理数据) -> A("处理数据")
+  code = code.replace(/(\w+)\[([^\]"'\n]*[\u4e00-\u9fff][^\]"'\n]*)\]/g, '$1["$2"]');
+  code = code.replace(/(\w+)\(([^\)"'\n]*[\u4e00-\u9fff][^\)"'\n]*)\)/g, '$1("$2")');
+  code = code.replace(/(\w+)\{([^\}"'\n]*[\u4e00-\u9fff][^\}"'\n]*)\}/g, '$1{"$2"}');
+  code = code.replace(/(\w+)\(\(([^\)"'\n]*[\u4e00-\u9fff][^\)"'\n]*)\)\)/g, '(("$2"))');
+  // Fix curly quotes → straight quotes
+  code = code.replace(/[""]/g, '"').replace(/['']/g, "'");
+  // Remove invisible characters
+  code = code.replace(/[\u200b\u200c\u200d\ufeff]/g, '');
+  return code;
+}
+
 function MermaidDiagram({ code }: { code: string }) {
   const [locale] = useState<Locale>(() => resolveInitialLocale());
   const [svg, setSvg] = useState('');
   const [renderError, setRenderError] = useState('');
-  const chartCode = code.trim();
+  const chartCode = sanitizeMermaidCode(code);
 
   useEffect(() => {
     if (!chartCode) return;
@@ -133,14 +151,21 @@ function MermaidDiagram({ code }: { code: string }) {
             useMaxWidth: false,
           },
         });
-        const { svg: renderedSvg } = await mermaid.render(`mermaid-${crypto.randomUUID()}`, chartCode);
+        const renderId = `mermaid-${crypto.randomUUID()}`;
+        const { svg: renderedSvg } = await mermaid.render(renderId, chartCode);
         if (!active) return;
-        setSvg(renderedSvg);
-        setRenderError('');
+        // Mermaid v11 may return SVG with error text instead of throwing
+        if (renderedSvg && /class="error-icon"|class="error-text"|Syntax error in text/i.test(renderedSvg)) {
+          setSvg('');
+          setRenderError(locale === 'zh' ? '图示渲染失败，已跳过该图示。' : 'Diagram rendering failed, skipped.');
+        } else {
+          setSvg(renderedSvg);
+          setRenderError('');
+        }
       } catch {
         if (!active) return;
         setSvg('');
-        setRenderError(locale === 'zh' ? '图示渲染失败，请检查 Mermaid 语法后重试。' : 'Failed to render the diagram. Please check the Mermaid syntax and try again.');
+        setRenderError(locale === 'zh' ? '图示渲染失败，已跳过该图示。' : 'Diagram rendering failed, skipped.');
       }
     };
     renderMermaid();
@@ -1061,8 +1086,15 @@ export default function Home() {
       if (!graphCode) {
         result += match[0];
       } else {
-        const renderCode = `%%{init: {'securityLevel': 'strict', 'theme': 'default', 'flowchart': {'htmlLabels': false, 'useMaxWidth': false}}}%%\n${graphCode}`;
+        const cleanedCode = sanitizeMermaidCode(graphCode);
+        const renderCode = `%%{init: {'securityLevel': 'strict', 'theme': 'default', 'flowchart': {'htmlLabels': false, 'useMaxWidth': false}}}%%\n${cleanedCode}`;
         const { svg } = await mermaid.render(`mermaid-download-${crypto.randomUUID()}-${blockNo}`, renderCode);
+        if (/class="error-icon"|class="error-text"|Syntax error in text/i.test(svg)) {
+          result += match[0]; // Keep original code block if render fails
+          lastIndex = codeBlockRegex.lastIndex;
+          blockNo += 1;
+          continue;
+        }
         const pngDataUrl = await svgToPngDataUrl(svg);
         result += `![流程图${blockNo}](${pngDataUrl})`;
       }
