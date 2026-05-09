@@ -202,7 +202,7 @@ export default function Home() {
   const isTypingRef = useRef(false);
   const fullTextRef = useRef('');
   const [statusMsg, setStatusMsg] = useState('');
-  
+
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -291,6 +291,7 @@ export default function Home() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
+  const audioInputRef = useRef<HTMLInputElement>(null);
   const [isContentOpen, setIsContentOpen] = useState(false);
   const [wordCount, setWordCount] = useState('');
   const [writingStyle, setWritingStyle] = useState('');
@@ -331,7 +332,7 @@ export default function Home() {
       appTitle: 'AI Document Formatter',
       navFormatter: 'Formatter',
       badgeBeta: 'Free during beta',
-      diffTitle: 'Not just “generate a doc”',
+      diffTitle: 'Not just "generate a doc"',
       diffSubtitle: 'Compare typical AI chat output vs. a Word-ready document you can download and share.',
       diffToggleShow: 'Show comparison',
       diffToggleHide: 'Hide',
@@ -381,6 +382,7 @@ export default function Home() {
       analyzingText: 'Analyzing...',
       analyzingImages: 'Analyzing images...',
       analyzingVideos: 'Analyzing videos...',
+      analyzingAudios: 'Analyzing audio...',
       modelHintVideoOnly: 'Videos uploaded: only video-capable models are available in the dropdown.',
       generatingText: 'Generating...',
       refineAnalyzing: 'Reviewing current content...',
@@ -427,7 +429,7 @@ export default function Home() {
       appTitle: 'AI Word 排版美化助手',
       navFormatter: '排版美化',
       badgeBeta: '全站免费体验中',
-      diffTitle: '不只是“生成一篇文档”',
+      diffTitle: '不只是"生成一篇文档"',
       diffSubtitle: '用对比法展示差异：传统 AI 输出 vs 可直接下载的 Word 成品。',
       diffToggleShow: '查看对比',
       diffToggleHide: '收起',
@@ -436,7 +438,7 @@ export default function Home() {
       diffLeftP1: '多为纯文本/Markdown，需要你手动排版成 Word。',
       diffRightP1: '自动结构化排版，一键导出 .docx 并可直接分享。',
       diffLeftB1: '复制到 Word 容易乱格式',
-      diffLeftB2: '图片只能“描述”，不能直接插入',
+      diffLeftB2: '图片只能"描述"，不能直接插入',
       diffLeftB3: '标题层级与段落间距不一致',
       diffRightB1: '一键下载 .docx',
       diffRightB2: '上传图片并插入到文档',
@@ -477,7 +479,8 @@ export default function Home() {
       analyzingText: '正在分析需求...',
       analyzingImages: '正在分析图片...',
       analyzingVideos: '正在分析视频...',
-      modelHintVideoOnly: '已上传视频：下拉框仅显示支持视频理解的多模态模型。',
+      analyzingAudios: '正在分析音频...',
+      modelHintVideoOnly: '已上传视频/音频：下拉框仅显示支持视频/音频理解的多模态模型。',
       generatingText: '正在生成内容...',
       refineAnalyzing: '正在阅读当前内容并构思优化方案...',
       refineGenerating: '正在润色生成中...',
@@ -671,7 +674,7 @@ export default function Home() {
     const isAtBottom = target.scrollHeight - target.scrollTop - target.clientHeight < 50;
     setAutoScroll(isAtBottom);
   };
-  
+
   // Typewriter effect interval
   useEffect(() => {
     const intervalId = setInterval(() => {
@@ -696,15 +699,19 @@ export default function Home() {
     }, 30);
     return () => clearInterval(intervalId);
   }, []);
-  
+
   const [uploadedImages, setUploadedImages] = useState<{id: string, base64: string, file: File}[]>([]);
   const [uploadedVideos, setUploadedVideos] = useState<{id: string, base64: string, file: File}[]>([]);
+  const [uploadedAudios, setUploadedAudios] = useState<{id: string, base64: string, file: File}[]>([]);
+  const [isReadingMedia, setIsReadingMedia] = useState(false);
   const hasImages = uploadedImages.length > 0;
   const hasVideos = uploadedVideos.length > 0;
+  const hasAudios = uploadedAudios.length > 0;
   const selectedModelOption = MODELS.find(m => m.value === model);
+  const hasMedia = hasVideos || hasAudios;
   const visibleModels = hasImages
     ? MODELS.filter(m => m.supportsImage)
-    : hasVideos
+    : hasMedia
       ? MODELS.filter(m => m.supportsVideo)
       : MODELS;
 
@@ -715,14 +722,14 @@ export default function Home() {
       if (firstImageModel) {
         Promise.resolve().then(() => setModel(firstImageModel.value));
       }
-    } else if (hasVideos) {
+    } else if (hasMedia) {
       if (selectedModelOption?.supportsVideo) return;
       const firstVideoModel = MODELS.find(m => m.supportsVideo);
       if (firstVideoModel) {
         Promise.resolve().then(() => setModel(firstVideoModel.value));
       }
     }
-  }, [hasImages, hasVideos, selectedModelOption]);
+  }, [hasImages, hasVideos, hasAudios, hasMedia, selectedModelOption]);
 
   const readFileAsDataUrl = (file: File) =>
     new Promise<string>((resolve, reject) => {
@@ -770,7 +777,7 @@ export default function Home() {
           ? await convertGifToPngDataUrl(file)
           : await readFileAsDataUrl(file);
         setUploadedImages(prev => [
-          ...prev, 
+          ...prev,
           { id: `img_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`, base64, file }
         ]);
       } catch {
@@ -792,18 +799,21 @@ export default function Home() {
     if (!files.length) return;
 
     setError(null);
+    setIsReadingMedia(true);
 
     for (const file of files) {
       try {
         const base64 = await readFileAsDataUrl(file);
         setUploadedVideos(prev => [
-          ...prev,
+          ...prev, 
           { id: `vid_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`, base64, file }
         ]);
       } catch {
         setError(locale === 'zh' ? `视频读取失败：${file.name}` : `Failed to read video: ${file.name}`);
       }
     }
+
+    setIsReadingMedia(false);
 
     if (videoInputRef.current) {
       videoInputRef.current.value = '';
@@ -814,10 +824,40 @@ export default function Home() {
     setUploadedVideos(prev => prev.filter(v => v.id !== idToRemove));
   };
 
+  const handleAudioUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+
+    setError(null);
+    setIsReadingMedia(true);
+
+    for (const file of files) {
+      try {
+        const base64 = await readFileAsDataUrl(file);
+        setUploadedAudios(prev => [
+          ...prev,
+          { id: `aud_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`, base64, file }
+        ]);
+      } catch {
+        setError(locale === 'zh' ? `音频读取失败：${file.name}` : `Failed to read audio: ${file.name}`);
+      }
+    }
+
+    setIsReadingMedia(false);
+
+    if (audioInputRef.current) {
+      audioInputRef.current.value = '';
+    }
+  };
+
+  const removeAudio = (idToRemove: string) => {
+    setUploadedAudios(prev => prev.filter(a => a.id !== idToRemove));
+  };
+
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    
+
     if (!file.name.endsWith('.docx')) {
       setError(text('errorUploadDocxOnly'));
       return;
@@ -872,16 +912,16 @@ export default function Home() {
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let firstTokenReceived = false;
-      
+
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
-        
+
         if (!firstTokenReceived) {
           firstTokenReceived = true;
           setStatusMsg(typingMsg);
         }
-        
+
         const chunk = decoder.decode(value, { stream: true });
         fullTextRef.current += chunk;
       }
@@ -889,7 +929,7 @@ export default function Home() {
     } catch (err) {
       console.error('Generation Error:', err);
       const e = err as Error;
-      
+
       // Friendly error messages mapping
       let errorMsg = e.message || text('errorUnknown');
       if (errorMsg.includes('Failed to fetch') || errorMsg.includes('NetworkError')) {
@@ -907,7 +947,7 @@ export default function Home() {
       } else if (errorMsg.includes('401') || errorMsg.includes('Invalid Authentication') || errorMsg.includes('Unauthorized')) {
         errorMsg = text('errorAuth');
       }
-      
+
       setError(errorMsg);
     } finally {
       setIsFetching(false);
@@ -971,6 +1011,7 @@ ${prompt ? '\nAdditional requirements: ' + prompt : ''}`;
         wordCount,
         images: uploadedImages.map(img => ({ id: img.id, base64: img.base64 })),
         videos: uploadedVideos.map(v => ({ id: v.id, base64: v.base64 })),
+        audios: uploadedAudios.map(a => ({ id: a.id, base64: a.base64 })),
       };
 
       await executeGenerate(
@@ -982,7 +1023,7 @@ ${prompt ? '\nAdditional requirements: ' + prompt : ''}`;
     }
 
     // Original formatter mode
-    if (!prompt.trim() && !hasVideos) {
+    if (!prompt.trim() && !hasVideos && !hasAudios) {
       setError(text('errorNeedPrompt'));
       return;
     }
@@ -1005,10 +1046,11 @@ ${prompt ? '\nAdditional requirements: ' + prompt : ''}`;
       documentDate,
       images: uploadedImages.map(img => ({ id: img.id, base64: img.base64 })),
       videos: uploadedVideos.map(v => ({ id: v.id, base64: v.base64 })),
+        audios: uploadedAudios.map(a => ({ id: a.id, base64: a.base64 })),
     };
 
     await executeGenerate(
-      payload, 
+      payload,
       uploadedImages.length > 0 ? text('analyzingImages') : text('analyzingText'),
       text('generatingText')
     );
@@ -1038,11 +1080,12 @@ ${prompt ? '\nAdditional requirements: ' + prompt : ''}`;
       documentDate,
       images: uploadedImages.map(img => ({ id: img.id, base64: img.base64 })),
       videos: uploadedVideos.map(v => ({ id: v.id, base64: v.base64 })),
+        audios: uploadedAudios.map(a => ({ id: a.id, base64: a.base64 })),
     };
 
     setRefinePrompt('');
     await executeGenerate(
-      payload, 
+      payload,
       text('refineAnalyzing'),
       text('refineGenerating')
     );
@@ -1270,7 +1313,7 @@ ${prompt ? '\nAdditional requirements: ' + prompt : ''}`;
     if (!cleanMarkdown) return;
     setIsDownloading(true);
     setError(null);
-    
+
     try {
       if (appMode === 'paper') {
         // Paper mode: use /api/download-paper
@@ -1329,7 +1372,8 @@ ${prompt ? '\nAdditional requirements: ' + prompt : ''}`;
           body: JSON.stringify({
             markdown: markdownForDownload,
             images: uploadedImages.map(img => ({ id: img.id, base64: img.base64 })),
-            videos: uploadedVideos.map(v => ({ id: v.id, base64: v.base64 }))
+            videos: uploadedVideos.map(v => ({ id: v.id, base64: v.base64 })),
+            audios: uploadedAudios.map(a => ({ id: a.id, base64: a.base64 }))
           }),
         });
 
@@ -1355,12 +1399,12 @@ ${prompt ? '\nAdditional requirements: ' + prompt : ''}`;
     } catch (err) {
       console.error('Download Error:', err);
       const e = err as Error;
-      
+
       let errorMsg = e.message || '下载发生未知错误';
       if (errorMsg.includes('Failed to fetch') || errorMsg.includes('NetworkError')) {
         errorMsg = '下载中断，请检查您的网络连接并重试。';
       }
-      
+
       setError(errorMsg);
     } finally {
       setIsDownloading(false);
@@ -1689,7 +1733,7 @@ ${prompt ? '\nAdditional requirements: ' + prompt : ''}`;
                 >
                   {visibleModels.map((m) => (
                     <option key={m.value} value={m.value}>
-                      {m.label}{m.supportsVideo ? (locale === 'zh' ? ' · 支持图片+视频' : ' · Vision+Video') : m.supportsImage ? (locale === 'zh' ? ' · 支持图片' : ' · Vision') : (locale === 'zh' ? ' · 仅文本' : ' · Text')}
+                      {m.label}{m.supportsVideo ? (locale === 'zh' ? ' · 图片+视频+音频' : ' · Vision+Video+Audio') : m.supportsImage ? (locale === 'zh' ? ' · 支持图片' : ' · Vision') : (locale === 'zh' ? ' · 仅文本' : ' · Text')}
                     </option>
                   ))}
                 </select>
@@ -1698,7 +1742,7 @@ ${prompt ? '\nAdditional requirements: ' + prompt : ''}`;
                     {text('modelHintVisionOnly')}
                   </p>
                 )}
-                {!hasImages && hasVideos && (
+                {!hasImages && hasMedia && (
                   <p className="mt-2 text-xs text-gray-500">
                     {text('modelHintVideoOnly')}
                   </p>
@@ -1827,7 +1871,7 @@ ${prompt ? '\nAdditional requirements: ' + prompt : ''}`;
           {/* Content Card - Hidden in paper mode */}
           {appMode !== 'paper' && (<>
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-            <div 
+            <div
               className="p-6 cursor-pointer hover:bg-gray-50 transition-colors flex items-center justify-between"
               onClick={() => setIsContentOpen(!isContentOpen)}
             >
@@ -1855,14 +1899,14 @@ ${prompt ? '\nAdditional requirements: ' + prompt : ''}`;
                 <div className="flex items-center justify-between mb-3">
                   <div className="text-sm font-medium text-gray-700">{locale === 'zh' ? '文本内容' : 'Text content'}</div>
                   <div className="flex items-center gap-3">
-                    <input 
-                      type="file" 
+                    <input
+                      type="file"
                       ref={fileInputRef}
                       accept=".docx"
                       onChange={handleFileUpload}
-                      className="hidden" 
+                      className="hidden"
                     />
-                    <button 
+                    <button
                       onClick={(e) => {
                         e.stopPropagation();
                         fileInputRef.current?.click();
@@ -1895,9 +1939,10 @@ ${prompt ? '\nAdditional requirements: ' + prompt : ''}`;
                         e.stopPropagation();
                         videoInputRef.current?.click();
                       }}
-                      className="text-xs flex items-center gap-1 text-indigo-600 bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-md transition-colors"
+                      disabled={isReadingMedia}
+                      className="text-xs flex items-center gap-1 text-indigo-600 bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-md transition-colors disabled:opacity-50"
                     >
-                      <Video className="w-3.5 h-3.5" />
+                      {isReadingMedia ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Video className="w-3.5 h-3.5" />}
                       {locale === 'zh' ? '添加视频' : 'Add Videos'}
                     </button>
                   </div>
@@ -1924,6 +1969,49 @@ ${prompt ? '\nAdditional requirements: ' + prompt : ''}`;
                     className="hidden"
                   />
                 </div>
+                {/* Audio upload inside content card */}
+                <div className="mt-4 pt-4 border-t border-gray-200">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                      <svg className="w-4 h-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4M12 3a4 4 0 014 4v4a4 4 0 01-8 0V7a4 4 0 014-4z" /></svg>
+                      {locale === 'zh' ? '上传音频' : 'Upload Audio'}
+                      <span className="text-xs text-gray-400">({locale === 'zh' ? '可选，仅 MiMo 支持' : 'Optional, MiMo only'})</span>
+                    </div>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        audioInputRef.current?.click();
+                      }}
+                      disabled={isReadingMedia}
+                      className="text-xs flex items-center gap-1 text-indigo-600 bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-md transition-colors disabled:opacity-50"
+                    >
+                      {isReadingMedia ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
+                      {locale === 'zh' ? '添加音频' : 'Add Audio'}
+                    </button>
+                  </div>
+                  {uploadedAudios.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      {uploadedAudios.map((aud) => (
+                        <div key={aud.id} className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-md px-3 py-2 text-sm">
+                          <svg className="w-4 h-4 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4M12 3a4 4 0 014 4v4a4 4 0 01-8 0V7a4 4 0 014-4z" /></svg>
+                          <span className="text-gray-700 max-w-[150px] truncate">{aud.file.name}</span>
+                          <span className="text-xs text-gray-400">{(aud.file.size / 1024 / 1024).toFixed(1)}MB</span>
+                          <button onClick={() => removeAudio(aud.id)} className="text-gray-400 hover:text-red-500 ml-1">
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <input
+                    type="file"
+                    ref={audioInputRef}
+                    accept="audio/*"
+                    multiple
+                    onChange={handleAudioUpload}
+                    className="hidden"
+                  />
+                </div>
               </div>
             )}
           </div>
@@ -1944,14 +2032,14 @@ ${prompt ? '\nAdditional requirements: ' + prompt : ''}`;
                   <span>{locale === 'zh' ? '上传图片后，AI 将会自动分析图片内容并将其插入到文章的相应位置，确保上下文连贯且图文不跑偏。若上传 GIF，将自动提取首帧按静态图处理。' : 'After you upload images, the model can analyze them and incorporate relevant details into the document. GIFs are handled as the first frame.'}</span>
                 </div>
               </div>
-            
+
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
               {uploadedImages.map((img) => (
                 <div key={img.id} className="relative group rounded-lg border border-gray-200 overflow-hidden aspect-square bg-gray-50">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img 
-                    src={img.base64} 
-                    alt="uploaded" 
+                  <img
+                    src={img.base64}
+                    alt="uploaded"
                     className="w-full h-full object-cover"
                   />
                   <button
@@ -1965,8 +2053,8 @@ ${prompt ? '\nAdditional requirements: ' + prompt : ''}`;
                   </div>
                 </div>
               ))}
-              
-              <button 
+
+              <button
                 onClick={() => imageInputRef.current?.click()}
                 className="flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-gray-300 hover:border-indigo-500 hover:bg-indigo-50 transition-colors aspect-square text-gray-500 hover:text-indigo-600"
               >
@@ -1990,14 +2078,14 @@ ${prompt ? '\nAdditional requirements: ' + prompt : ''}`;
           <div className="w-full lg:w-[40%] lg:h-full lg:overflow-y-auto lg:pr-2 pb-6 flex flex-col custom-scrollbar">
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 flex flex-col min-h-max">
               <h2 className="text-lg font-semibold text-gray-800 mb-4 shrink-0">{locale === 'zh' ? '操作面板' : 'Actions'}</h2>
-              
+
               <button
                 onClick={handleGenerate}
                 disabled={isFetching || isTyping}
                 className={cn(
                   "w-full flex items-center justify-center gap-2 py-3 px-4 rounded-lg font-medium text-white transition-all shadow-sm shrink-0",
-                  (isFetching || isTyping) 
-                    ? "bg-indigo-400 cursor-not-allowed" 
+                  (isFetching || isTyping)
+                    ? "bg-indigo-400 cursor-not-allowed"
                     : "bg-indigo-600 hover:bg-indigo-700 hover:shadow"
                 )}
               >
@@ -2026,7 +2114,7 @@ ${prompt ? '\nAdditional requirements: ' + prompt : ''}`;
                 <div className="mt-6 border border-gray-200 rounded-lg overflow-hidden bg-gray-50 flex flex-col flex-1 min-h-[300px] transition-all">
                   <div className="bg-gray-100 border-b border-gray-200 px-3 py-2 flex items-center justify-between shrink-0">
                     <span className="text-xs font-medium text-gray-600">{locale === 'zh' ? '生成预览' : 'Preview'}</span>
-                    <button 
+                    <button
                       onClick={() => setIsModalOpen(true)}
                       className="text-gray-500 hover:text-indigo-600 p-1 rounded hover:bg-gray-200 transition-colors"
                       title={locale === 'zh' ? '全屏查看' : 'Fullscreen'}
@@ -2034,7 +2122,7 @@ ${prompt ? '\nAdditional requirements: ' + prompt : ''}`;
                       <Maximize2 className="w-4 h-4" />
                     </button>
                   </div>
-                  <div 
+                  <div
                     ref={resultRef}
                     onScroll={handleScroll}
                     className="p-4 overflow-y-auto flex-1 text-sm prose prose-sm prose-indigo max-w-none custom-scrollbar bg-white"
@@ -2060,7 +2148,7 @@ ${prompt ? '\nAdditional requirements: ' + prompt : ''}`;
                     className={cn(
                       "w-full flex items-center justify-center gap-2 py-2 px-4 rounded-md font-medium transition-all text-sm",
                       (isFetching || isTyping || !displayedMarkdown || isDownloading)
-                        ? "bg-gray-100 text-gray-400 cursor-not-allowed" 
+                        ? "bg-gray-100 text-gray-400 cursor-not-allowed"
                         : "bg-green-600 text-white hover:bg-green-700 shadow-sm"
                     )}
                   >
@@ -2089,15 +2177,15 @@ ${prompt ? '\nAdditional requirements: ' + prompt : ''}`;
                   <button onClick={() => handleRefine(locale === 'zh' ? '请帮我调整这篇文章的语气，使其显得更加正式和严谨。' : 'Make the tone more formal and rigorous.')} className="text-xs bg-white border border-indigo-200 text-indigo-600 px-3 py-1.5 rounded-full hover:bg-indigo-100 hover:border-indigo-300 transition-colors">{locale === 'zh' ? '更正式' : 'More formal'}</button>
                 </div>
                 <div className="flex gap-2">
-                  <input 
-                    type="text" 
+                  <input
+                    type="text"
                     value={refinePrompt}
                     onChange={(e) => setRefinePrompt(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && handleRefine()}
                     placeholder={text('refinePlaceholder')}
                     className="flex-1 rounded-lg border border-indigo-200 px-3 py-2 text-sm focus:ring-1 focus:ring-indigo-500 outline-none bg-white"
                   />
-                  <button 
+                  <button
                     onClick={() => handleRefine()}
                     disabled={!refinePrompt.trim()}
                     className="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
@@ -2116,7 +2204,7 @@ ${prompt ? '\nAdditional requirements: ' + prompt : ''}`;
                     <p className="text-sm">{error}</p>
                   </div>
                 )}
-                
+
                 {success && (
                   <div className="p-4 bg-green-50 border border-green-100 rounded-lg flex items-start gap-3 text-green-700">
                     <Download className="w-5 h-5 shrink-0 mt-0.5" />
@@ -2164,7 +2252,7 @@ ${prompt ? '\nAdditional requirements: ' + prompt : ''}`;
                 <Heart className="w-5 h-5 text-red-500 fill-current" />
                 支持与捐助
               </h3>
-              <button 
+              <button
                 onClick={() => setIsDonateModalOpen(false)}
                 className="p-2 bg-gray-100 hover:bg-gray-200 rounded-full text-gray-600 transition-colors"
               >
@@ -2272,7 +2360,7 @@ ${prompt ? '\nAdditional requirements: ' + prompt : ''}`;
           <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[80vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
             <div className="flex items-center justify-between p-4 border-b border-gray-100">
               <h3 className="font-semibold text-gray-800 text-lg">{text('privacyTitle')}</h3>
-              <button 
+              <button
                 onClick={() => setIsPrivacyModalOpen(false)}
                 className="p-2 bg-gray-100 hover:bg-gray-200 rounded-full text-gray-600 transition-colors"
               >
@@ -2296,7 +2384,7 @@ ${prompt ? '\nAdditional requirements: ' + prompt : ''}`;
                   <h4>1. Data flow</h4>
                   <p>This site does not store or retain your prompt, text, or images in a database for the purpose of providing the formatting service. Your inputs are transmitted over HTTPS to the selected model provider for real-time inference.</p>
                   <h4>2. Third-party processing</h4>
-                  <p>Your data may be processed by third-party AI providers depending on the model you choose. Please review the provider’s terms and privacy policy for details.</p>
+                  <p>Your data may be processed by third-party AI providers depending on the model you choose. Please review the provider's terms and privacy policy for details.</p>
                   <h4>3. Model training</h4>
                   <p>This site does not use your inputs to train or fine-tune models. For third-party providers, refer to their official statements regarding data retention and training.</p>
                   <h4>4. Updates</h4>
@@ -2314,7 +2402,7 @@ ${prompt ? '\nAdditional requirements: ' + prompt : ''}`;
           <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[80vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
             <div className="flex items-center justify-between p-4 border-b border-gray-100">
               <h3 className="font-semibold text-gray-800 text-lg">{text('agreementTitle')}</h3>
-              <button 
+              <button
                 onClick={() => setIsAgreementModalOpen(false)}
                 className="p-2 bg-gray-100 hover:bg-gray-200 rounded-full text-gray-600 transition-colors"
               >
@@ -2325,7 +2413,7 @@ ${prompt ? '\nAdditional requirements: ' + prompt : ''}`;
               {locale === 'zh' ? (
                 <>
                   <h4>1. 服务说明</h4>
-                  <p>“AI Word 排版美化助手”为您提供基于人工智能的文档生成与排版美化服务。您应合法、合规地使用本工具，不得利用本工具生成违反国家法律法规、危害国家安全、破坏社会稳定、侵犯他人合法权益的内容。</p>
+                  <p>"AI Word 排版美化助手"为您提供基于人工智能的文档生成与排版美化服务。您应合法、合规地使用本工具，不得利用本工具生成违反国家法律法规、危害国家安全、破坏社会稳定、侵犯他人合法权益的内容。</p>
                   <h4>2. 知识产权与版权风险申明</h4>
                   <p>本平台不主动使用未经授权的特定字体、模板或受版权保护的图片进行内容生成。但请注意，由于 AI 模型的特性，生成的文本或内容可能偶有雷同，或者模型在训练时可能受到未知数据的干扰。<strong>用户需自行对使用本工具生成的文档负责，并承担因商用等目的引发的任何版权、著作权纠纷的直接或间接法律责任。</strong></p>
                   <h4>3. 服务的可用性与免责声明</h4>
@@ -2356,14 +2444,14 @@ ${prompt ? '\nAdditional requirements: ' + prompt : ''}`;
           <div className="bg-white rounded-xl shadow-xl w-full max-w-4xl h-full max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
             <div className="flex items-center justify-between p-4 border-b border-gray-100">
               <h3 className="font-semibold text-gray-800">{locale === 'zh' ? '文档预览' : 'Document preview'}</h3>
-              <button 
+              <button
                 onClick={() => setIsModalOpen(false)}
                 className="p-2 bg-gray-100 hover:bg-gray-200 rounded-full text-gray-600 transition-colors"
               >
                 <Minimize2 className="w-4 h-4" />
               </button>
             </div>
-            <div 
+            <div
               ref={modalResultRef}
               onScroll={handleScroll}
               className="overflow-y-auto flex-1 max-w-none custom-scrollbar word-preview-container"

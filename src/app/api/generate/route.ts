@@ -372,10 +372,11 @@ export async function POST(req: Request) {
       baseURL: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
     });
 
-    const { prompt, content, model, images, videos, wordCount, writingStyle, eduLevel, perfLevel, addTypos, humanTrace, enableEvidenceSupport, diagramMode, enableSignatureDate, authorName, documentDate, locale, documentType } = await req.json();
+    const { prompt, content, model, images, videos, audios, wordCount, writingStyle, eduLevel, perfLevel, addTypos, humanTrace, enableEvidenceSupport, diagramMode, enableSignatureDate, authorName, documentDate, locale, documentType } = await req.json();
 
     const hasImages = images && images.length > 0;
     const hasVideos = videos && videos.length > 0;
+    const hasAudios = audios && audios.length > 0;
     const isPaperMode = documentType === 'paper';
     isZh = locale === 'zh';
 
@@ -761,7 +762,24 @@ Requirements:
       );
     }
 
-    if (!hasImages && !hasVideos) {
+    if (hasAudios) {
+      textPrompt += l(
+        `\n\n【音频分析指令】：用户上传了 ${audios.length} 个音频文件，你需要仔细分析音频内容，提取关键信息，并生成结构化文档。
+要求：
+1. 根据音频内容生成结构化的文档（如会议纪要、访谈记录、音频摘要等）
+2. 提取音频中的关键对话、要点和重要信息
+3. 如有对话，尽量还原对话内容
+4. 按时间线或主题组织内容`,
+        `\n\nAudio analysis instructions: the user uploaded ${audios.length} audio file(s). Carefully analyze the audio content, extract key information, and generate a structured document.
+Requirements:
+1. Generate a structured document based on audio content (e.g., meeting notes, interview transcript, audio summary)
+2. Extract key dialogue, main points, and important information
+3. If there are conversations, try to reproduce them
+4. Organize content by timeline or topic`
+      );
+    }
+
+    if (!hasImages && !hasVideos && !hasAudios) {
       textPrompt += l(
         `\n\n【重要指令】：绝对不能在文档中使用任何表情符号（Emoji）和图标。`,
         `\n\nImportant: Never use emojis or decorative symbols in the document.`
@@ -820,6 +838,19 @@ Requirements:
           userContent.push({
             type: 'video_url',
             video_url: { url, fps: 2 }
+          });
+        }
+      }
+    }
+
+    // Audio handling: MiMo supports input_audio content type
+    if (hasAudios && client === mimoOpenai) {
+      for (const aud of audios as { id: string; base64: string }[]) {
+        const url = await uploadToLitterbox(aud.base64, `${aud.id}.wav`, 120000);
+        if (url) {
+          userContent.push({
+            type: 'input_audio',
+            input_audio: { data: url }
           });
         }
       }
