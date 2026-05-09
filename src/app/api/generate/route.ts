@@ -4,7 +4,8 @@ import { trackAdminEvent } from '@/lib/admin-metrics';
 import { uploadToLitterbox } from '@/lib/upload';
 import { execSync } from 'child_process';
 import { writeFileSync, readFileSync, unlinkSync, mkdirSync, existsSync } from 'fs';
-import { tmpdir, join } from 'os';
+import { tmpdir } from 'os';
+import { join } from 'path';
 
 export const maxDuration = 300; // Allow 5 mins for large models + vision
 
