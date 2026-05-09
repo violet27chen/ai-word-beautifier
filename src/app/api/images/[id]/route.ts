@@ -1,8 +1,5 @@
 import { NextResponse } from 'next/server';
-import { readFile, stat } from 'fs/promises';
-import { join } from 'path';
-
-const IMAGE_DIR = '/tmp/ai-word-images';
+import { getImageFromRedis } from '@/lib/redis';
 
 export async function GET(
   _req: Request,
@@ -15,19 +12,17 @@ export async function GET(
     return NextResponse.json({ error: 'Invalid image id' }, { status: 400 });
   }
 
-  const filePath = join(IMAGE_DIR, `${id}.png`);
+  const data = await getImageFromRedis(id);
 
-  try {
-    await stat(filePath);
-    const data = await readFile(filePath);
-    return new NextResponse(data, {
-      headers: {
-        'Content-Type': 'image/png',
-        'Cache-Control': 'public, max-age=3600',
-        'Access-Control-Allow-Origin': '*',
-      },
-    });
-  } catch {
-    return NextResponse.json({ error: 'Image not found' }, { status: 404 });
+  if (!data) {
+    return NextResponse.json({ error: 'Image not found or expired' }, { status: 404 });
   }
+
+  return new NextResponse(data, {
+    headers: {
+      'Content-Type': 'image/png',
+      'Cache-Control': 'public, max-age=600',
+      'Access-Control-Allow-Origin': '*',
+    },
+  });
 }

@@ -1,10 +1,7 @@
 import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { trackAdminEvent } from '@/lib/admin-metrics';
-import { writeFile, mkdir, unlink } from 'fs/promises';
-import { join } from 'path';
-
-const IMAGE_DIR = '/tmp/ai-word-images';
+import { saveImageToRedis } from '@/lib/redis';
 
 export const maxDuration = 300; // Allow 5 mins for large models + vision
 
@@ -755,16 +752,11 @@ Available image IDs:\n`
       { type: 'text', text: textPrompt }
     ];
 
-    // Save images to disk for MiMo URL-based input
-    const savedImageIds: string[] = [];
+    // Save images to Redis for MiMo URL-based input
     if (hasImages && client === mimoOpenai) {
-      await mkdir(IMAGE_DIR, { recursive: true });
       const origin = new URL(req.url).origin;
       for (const img of images as { id: string; base64: string }[]) {
-        const base64Data = img.base64.replace(/^data:image\/[^;]+;base64,/, '');
-        const filePath = join(IMAGE_DIR, `${img.id}.png`);
-        await writeFile(filePath, Buffer.from(base64Data, 'base64'));
-        savedImageIds.push(img.id);
+        await saveImageToRedis(img.id, img.base64);
         const imageUrl = `${origin}/api/images/${img.id}`;
         userContent.push({
           type: 'image_url',
@@ -859,10 +851,6 @@ Available image IDs:\n`
           }
         } finally {
           controller.close();
-          // Clean up temp images saved for MiMo URL-based input
-          for (const imgId of savedImageIds) {
-            unlink(join(IMAGE_DIR, `${imgId}.png`)).catch(() => {});
-          }
         }
       }
     });
