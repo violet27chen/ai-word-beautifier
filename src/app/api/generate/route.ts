@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { trackAdminEvent } from '@/lib/admin-metrics';
+import { uploadToLitterbox } from '@/lib/upload';
 
 export const maxDuration = 300; // Allow 5 mins for large models + vision
 
@@ -752,14 +753,27 @@ Available image IDs:\n`
     ];
 
     if (hasImages) {
-      images.forEach((img: { id: string, base64: string }) => {
-        if (client === zhipuOpenai || client === doubaoOpenai || client === mimoOpenai) {
-          userContent.push({
-            type: 'image_url',
-            image_url: { url: img.base64 }
-          });
+      if (client === mimoOpenai) {
+        // Upload images to litterbox for MiMo URL-based input
+        for (const img of images as { id: string; base64: string }[]) {
+          const url = await uploadToLitterbox(img.base64, `${img.id}.png`);
+          if (url) {
+            userContent.push({
+              type: 'image_url',
+              image_url: { url }
+            });
+          }
         }
-      });
+      } else {
+        images.forEach((img: { id: string, base64: string }) => {
+          if (client === zhipuOpenai || client === doubaoOpenai) {
+            userContent.push({
+              type: 'image_url',
+              image_url: { url: img.base64 }
+            });
+          }
+        });
+      }
     }
 
     // Moonshot handles images by uploading them first or using base64.
