@@ -982,7 +982,7 @@ ${prompt ? '\nAdditional requirements: ' + prompt : ''}`;
     }
 
     // Original formatter mode
-    if (!prompt.trim()) {
+    if (!prompt.trim() && !hasVideos) {
       setError(text('errorNeedPrompt'));
       return;
     }
@@ -1882,6 +1882,48 @@ ${prompt ? '\nAdditional requirements: ' + prompt : ''}`;
                   className="w-full rounded-lg border border-gray-300 px-4 py-3 text-gray-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all resize-none font-mono text-sm bg-white"
                   rows={8}
                 />
+                {/* Video upload inside content card */}
+                <div className="mt-4 pt-4 border-t border-gray-200">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                      <Video className="w-4 h-4 text-gray-500" />
+                      {locale === 'zh' ? '上传视频' : 'Upload Videos'}
+                      <span className="text-xs text-gray-400">({locale === 'zh' ? '可选，仅 MiMo 支持' : 'Optional, MiMo only'})</span>
+                    </div>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        videoInputRef.current?.click();
+                      }}
+                      className="text-xs flex items-center gap-1 text-indigo-600 bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-md transition-colors"
+                    >
+                      <Video className="w-3.5 h-3.5" />
+                      {locale === 'zh' ? '添加视频' : 'Add Videos'}
+                    </button>
+                  </div>
+                  {uploadedVideos.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      {uploadedVideos.map((vid) => (
+                        <div key={vid.id} className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-md px-3 py-2 text-sm">
+                          <Video className="w-4 h-4 text-indigo-400" />
+                          <span className="text-gray-700 max-w-[150px] truncate">{vid.file.name}</span>
+                          <span className="text-xs text-gray-400">{(vid.file.size / 1024 / 1024).toFixed(1)}MB</span>
+                          <button onClick={() => removeVideo(vid.id)} className="text-gray-400 hover:text-red-500 ml-1">
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <input
+                    type="file"
+                    ref={videoInputRef}
+                    accept="video/mp4,video/mov,video/avi,video/wmv"
+                    multiple
+                    onChange={handleVideoUpload}
+                    className="hidden"
+                  />
+                </div>
               </div>
             )}
           </div>
@@ -1938,60 +1980,6 @@ ${prompt ? '\nAdditional requirements: ' + prompt : ''}`;
               accept="image/*"
               multiple
               onChange={handleImageUpload}
-              className="hidden"
-            />
-          </div>
-          {/* Video Upload Section */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <div className="flex flex-col mb-4 gap-2">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-gray-800">
-                  <Video className="w-5 h-5 text-gray-500" />
-                  <h2 className="text-lg font-semibold">{locale === 'zh' ? '上传视频 (可选)' : 'Videos (Optional)'}</h2>
-                </div>
-                <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
-                  {locale === 'zh' ? '仅支持 MiMo-v2.5 / MiMo-Omni 模型' : 'Only MiMo-v2.5 / MiMo-Omni supported'}
-                </span>
-              </div>
-              <div className="text-xs text-indigo-600 bg-indigo-50 p-2 rounded-md flex items-start gap-1">
-                <Wand2 className="w-4 h-4 shrink-0" />
-                <span>{locale === 'zh' ? '上传视频后，AI 将会自动分析视频内容并生成结构化文档。支持格式：MP4、MOV、AVI、WMV，单文件最大 300MB。' : 'After you upload videos, the AI will analyze the video content and generate a structured document. Supported formats: MP4, MOV, AVI, WMV, max 300MB per file.'}</span>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-              {uploadedVideos.map((vid) => (
-                <div key={vid.id} className="relative group rounded-lg border border-gray-200 overflow-hidden bg-gray-50 p-3">
-                  <div className="flex items-center gap-2">
-                    <Video className="w-8 h-8 text-indigo-400 shrink-0" />
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium text-gray-800 truncate">{vid.file.name}</p>
-                      <p className="text-xs text-gray-500">{(vid.file.size / 1024 / 1024).toFixed(1)} MB</p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => removeVideo(vid.id)}
-                    className="absolute top-2 right-2 p-1 bg-white/80 hover:bg-red-100 hover:text-red-600 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-              ))}
-
-              <button
-                onClick={() => videoInputRef.current?.click()}
-                className="flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-gray-300 hover:border-indigo-500 hover:bg-indigo-50 transition-colors py-6 text-gray-500 hover:text-indigo-600"
-              >
-                <Video className="w-6 h-6" />
-                <span className="text-xs font-medium">{locale === 'zh' ? '添加视频' : 'Add videos'}</span>
-              </button>
-            </div>
-            <input
-              type="file"
-              ref={videoInputRef}
-              accept="video/mp4,video/mov,video/avi,video/wmv"
-              multiple
-              onChange={handleVideoUpload}
               className="hidden"
             />
           </div>
