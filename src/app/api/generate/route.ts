@@ -2,6 +2,9 @@ import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { trackAdminEvent } from '@/lib/admin-metrics';
 import { uploadToLitterbox } from '@/lib/upload';
+import { execSync } from 'child_process';
+import { writeFileSync, readFileSync, unlinkSync, mkdirSync, existsSync } from 'fs';
+import { tmpdir, join } from 'os';
 
 export const maxDuration = 300; // Allow 5 mins for large models + vision
 
@@ -338,6 +341,44 @@ async function fetchLatestEvidenceFromMcp(query: string): Promise<EvidenceItem[]
       .filter((item): item is EvidenceItem => item !== null);
   } catch {
     return [];
+  }
+}
+
+/**
+ * Extract audio track from a video file (base64 encoded).
+ * Uses ffmpeg to extract audio as WAV format, returns base64 encoded audio.
+ * Returns null if extraction fails (e.g., video has no audio track).
+ */
+function extractAudioFromVideo(videoBase64: string): string | null {
+  const tmpDir = join(tmpdir(), 'ai-word-audio-extract');
+  try {
+    if (!existsSync(tmpDir)) mkdirSync(tmpDir, { recursive: true });
+    const ts = Date.now();
+    const videoPath = join(tmpDir, `video_${ts}.mp4`);
+    const audioPath = join(tmpDir, `audio_${ts}.wav`);
+
+    writeFileSync(videoPath, Buffer.from(videoBase64, 'base64'));
+
+    try {
+      execSync(
+        `ffmpeg -i "${videoPath}" -vn -acodec pcm_s16le -ar 16000 -ac 1 "${audioPath}" -y`,
+        { stdio: 'ignore', timeout: 120000 }
+      );
+    } catch {
+      // Video may have no audio track
+      return null;
+    }
+
+    const audioBuffer = readFileSync(audioPath);
+    const result = audioBuffer.toString('base64');
+
+    // Cleanup
+    try { unlinkSync(videoPath); } catch {}
+    try { unlinkSync(audioPath); } catch {}
+
+    return result;
+  } catch {
+    return null;
   }
 }
 
@@ -747,18 +788,20 @@ Available image IDs:\n`
 
     if (hasVideos) {
       textPrompt += l(
-        `\n\n【视频分析指令】：用户上传了 ${videos.length} 个视频，你需要仔细分析视频内容，提取关键信息，并生成结构化文档。
+        `\n\n【视频分析指令】：用户上传了 ${videos.length} 个视频，你需要仔细分析视频画面和音频内容，提取关键信息，并生成结构化文档。
 要求：
-1. 根据视频内容生成结构化的文档（如会议纪要、视频摘要、内容大纲等）
+1. 根据视频画面和音频内容生成结构化的文档（如会议纪要、视频摘要、内容大纲等）
 2. 提取视频中的关键对话、要点和重要信息
-3. 按时间线或主题组织内容
-4. 生成的文档应当详实、准确、有条理`,
-        `\n\nVideo analysis instructions: the user uploaded ${videos.length} video(s). Carefully analyze the video content, extract key information, and generate a structured document.
+3. 分析视频画面中的视觉内容（文字、图表、场景等）
+4. 分析视频中的音频内容（对话、旁白、背景音等）
+5. 按时间线或主题组织内容`,
+        `\n\nVideo analysis instructions: the user uploaded ${videos.length} video(s). Carefully analyze both the video visuals and audio content, extract key information, and generate a structured document.
 Requirements:
-1. Generate a structured document based on video content (e.g., meeting notes, video summary, content outline)
+1. Generate a structured document based on video visuals and audio (e.g., meeting notes, video summary, content outline)
 2. Extract key dialogue, main points, and important information
-3. Organize content by timeline or topic
-4. The document should be detailed, accurate, and well-organized`
+3. Analyze visual content (text, charts, scenes, etc.)
+4. Analyze audio content (dialogue, narration, background sounds, etc.)
+5. Organize content by timeline or topic`
       );
     }
 
@@ -830,7 +873,7 @@ Requirements:
         });
     }
 
-    // Video handling: MiMo supports video_url content type
+    // Video handling: video frames via video_url, audio track via input_audio
     if (hasVideos && client === mimoOpenai) {
       for (const vid of videos as { id: string; base64: string }[]) {
         const url = await uploadToLitterbox(vid.base64, `${vid.id}.mp4`, 120000);
@@ -839,6 +882,14 @@ Requirements:
             type: 'video_url',
             video_url: { url, fps: 2 }
           });
+          // Extract audio track from video via ffmpeg
+          const audioBase64 = extractAudioFromVideo(vid.base64);
+          if (audioBase64) {
+            userContent.push({
+              type: 'input_audio',
+              input_audio: { data: `data:audio/wav;base64,${audioBase64}` }
+            });
+          }
         }
       }
     }
