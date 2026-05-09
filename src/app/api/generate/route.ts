@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { trackAdminEvent } from '@/lib/admin-metrics';
-import { saveImage } from '@/lib/image-store';
 
 export const maxDuration = 300; // Allow 5 mins for large models + vision
 
@@ -752,23 +751,9 @@ Available image IDs:\n`
       { type: 'text', text: textPrompt }
     ];
 
-    // Save images to Redis for MiMo URL-based input
-    if (hasImages && client === mimoOpenai) {
-      const origin = new URL(req.url).origin;
-      for (const img of images as { id: string; base64: string }[]) {
-        await saveImage(img.id, img.base64);
-        const imageUrl = `${origin}/api/images/${img.id}`;
-        userContent.push({
-          type: 'image_url',
-          image_url: { url: imageUrl }
-        });
-      }
-    }
-
-    if (hasImages && client !== mimoOpenai) {
+    if (hasImages) {
       images.forEach((img: { id: string, base64: string }) => {
-        // Only add image_url if not using moonshot multi-modal (they use different handling)
-        if (client === zhipuOpenai || client === doubaoOpenai) {
+        if (client === zhipuOpenai || client === doubaoOpenai || client === mimoOpenai) {
           userContent.push({
             type: 'image_url',
             image_url: { url: img.base64 }
