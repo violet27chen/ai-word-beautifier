@@ -4,7 +4,7 @@
 const LITTERBOX_API = 'https://litterbox.catbox.moe/resources/internals/api.php';
 const EXPIRY = '1h';
 
-export async function uploadToLitterbox(base64Data: string, filename: string = 'image.png'): Promise<string | null> {
+export async function uploadToLitterbox(base64Data: string, filename: string = 'image.png', timeoutMs: number = 60000): Promise<string | null> {
   try {
     // Extract raw base64 and detect mime type
     const match = base64Data.match(/^data:([^;]+);base64,(.+)$/);
@@ -23,7 +23,7 @@ export async function uploadToLitterbox(base64Data: string, filename: string = '
     const res = await fetch(LITTERBOX_API, {
       method: 'POST',
       body: form,
-      signal: AbortSignal.timeout(30000),
+      signal: AbortSignal.timeout(timeoutMs),
     });
 
     if (!res.ok) return null;

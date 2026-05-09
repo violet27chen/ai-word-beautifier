@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { Download, Loader2, FileText, Settings, Wand2, AlertCircle, Upload, ImagePlus, X, ChevronDown, ChevronUp, Maximize2, Minimize2, SlidersHorizontal, Copy, Check } from 'lucide-react';
+import { Download, Loader2, FileText, Settings, Wand2, AlertCircle, Upload, ImagePlus, Video, X, ChevronDown, ChevronUp, Maximize2, Minimize2, SlidersHorizontal, Copy, Check } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import Markdown from 'markdown-to-jsx';
@@ -26,6 +26,7 @@ type ModelOption = {
   value: string;
   label: string;
   supportsImage: boolean;
+  supportsVideo?: boolean;
 };
 
 const MODELS: ModelOption[] = [
@@ -33,8 +34,8 @@ const MODELS: ModelOption[] = [
   { value: 'deepseek-v4-pro', label: 'DeepSeek-V4-Pro', supportsImage: false },
   { value: 'mimo-v2.5-pro', label: 'MiMo-v2.5-pro (小米)', supportsImage: false },
   { value: 'mimo-v2-pro', label: 'MiMo-v2-pro (小米)', supportsImage: false },
-  { value: 'mimo-v2.5', label: 'MiMo-v2.5 (小米)', supportsImage: true },
-  { value: 'mimo-v2-omni', label: 'MiMo-Omni (全模态，小米)', supportsImage: true },
+  { value: 'mimo-v2.5', label: 'MiMo-v2.5 (小米)', supportsImage: true, supportsVideo: true },
+  { value: 'mimo-v2-omni', label: 'MiMo-Omni (全模态，小米)', supportsImage: true, supportsVideo: true },
   { value: 'mimo-v2-flash', label: 'MiMo-v2-flash (小米)', supportsImage: false },
   { value: 'kimi-k2.6', label: 'Kimi-K2.6 (多模态)', supportsImage: true },
   { value: 'kimi-k2.5', label: 'Kimi-K2.5 (多模态)', supportsImage: true },
@@ -289,6 +290,7 @@ export default function Home() {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
+  const videoInputRef = useRef<HTMLInputElement>(null);
   const [isContentOpen, setIsContentOpen] = useState(false);
   const [wordCount, setWordCount] = useState('');
   const [writingStyle, setWritingStyle] = useState('');
@@ -378,6 +380,8 @@ export default function Home() {
       generatingDefault: 'Generating...',
       analyzingText: 'Analyzing...',
       analyzingImages: 'Analyzing images...',
+      analyzingVideos: 'Analyzing videos...',
+      modelHintVideoOnly: 'Videos uploaded: only video-capable models are available in the dropdown.',
       generatingText: 'Generating...',
       refineAnalyzing: 'Reviewing current content...',
       refineGenerating: 'Refining...',
@@ -472,6 +476,8 @@ export default function Home() {
       generatingDefault: '正在生成内容...',
       analyzingText: '正在分析需求...',
       analyzingImages: '正在分析图片...',
+      analyzingVideos: '正在分析视频...',
+      modelHintVideoOnly: '已上传视频：下拉框仅显示支持视频理解的多模态模型。',
       generatingText: '正在生成内容...',
       refineAnalyzing: '正在阅读当前内容并构思优化方案...',
       refineGenerating: '正在润色生成中...',
@@ -692,18 +698,31 @@ export default function Home() {
   }, []);
   
   const [uploadedImages, setUploadedImages] = useState<{id: string, base64: string, file: File}[]>([]);
+  const [uploadedVideos, setUploadedVideos] = useState<{id: string, base64: string, file: File}[]>([]);
   const hasImages = uploadedImages.length > 0;
+  const hasVideos = uploadedVideos.length > 0;
   const selectedModelOption = MODELS.find(m => m.value === model);
-  const visibleModels = hasImages ? MODELS.filter(m => m.supportsImage) : MODELS;
+  const visibleModels = hasImages
+    ? MODELS.filter(m => m.supportsImage)
+    : hasVideos
+      ? MODELS.filter(m => m.supportsVideo)
+      : MODELS;
 
   useEffect(() => {
-    if (!hasImages) return;
-    if (selectedModelOption?.supportsImage) return;
-    const firstImageModel = MODELS.find(m => m.supportsImage);
-    if (firstImageModel) {
-      Promise.resolve().then(() => setModel(firstImageModel.value));
+    if (hasImages) {
+      if (selectedModelOption?.supportsImage) return;
+      const firstImageModel = MODELS.find(m => m.supportsImage);
+      if (firstImageModel) {
+        Promise.resolve().then(() => setModel(firstImageModel.value));
+      }
+    } else if (hasVideos) {
+      if (selectedModelOption?.supportsVideo) return;
+      const firstVideoModel = MODELS.find(m => m.supportsVideo);
+      if (firstVideoModel) {
+        Promise.resolve().then(() => setModel(firstVideoModel.value));
+      }
     }
-  }, [hasImages, selectedModelOption]);
+  }, [hasImages, hasVideos, selectedModelOption]);
 
   const readFileAsDataUrl = (file: File) =>
     new Promise<string>((resolve, reject) => {
@@ -766,6 +785,33 @@ export default function Home() {
 
   const removeImage = (idToRemove: string) => {
     setUploadedImages(prev => prev.filter(img => img.id !== idToRemove));
+  };
+
+  const handleVideoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+
+    setError(null);
+
+    for (const file of files) {
+      try {
+        const base64 = await readFileAsDataUrl(file);
+        setUploadedVideos(prev => [
+          ...prev,
+          { id: `vid_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`, base64, file }
+        ]);
+      } catch {
+        setError(locale === 'zh' ? `视频读取失败：${file.name}` : `Failed to read video: ${file.name}`);
+      }
+    }
+
+    if (videoInputRef.current) {
+      videoInputRef.current.value = '';
+    }
+  };
+
+  const removeVideo = (idToRemove: string) => {
+    setUploadedVideos(prev => prev.filter(v => v.id !== idToRemove));
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -924,6 +970,7 @@ ${prompt ? '\nAdditional requirements: ' + prompt : ''}`;
         documentType: 'paper' as const,
         wordCount,
         images: uploadedImages.map(img => ({ id: img.id, base64: img.base64 })),
+        videos: uploadedVideos.map(v => ({ id: v.id, base64: v.base64 })),
       };
 
       await executeGenerate(
@@ -957,6 +1004,7 @@ ${prompt ? '\nAdditional requirements: ' + prompt : ''}`;
       authorName,
       documentDate,
       images: uploadedImages.map(img => ({ id: img.id, base64: img.base64 })),
+      videos: uploadedVideos.map(v => ({ id: v.id, base64: v.base64 })),
     };
 
     await executeGenerate(
@@ -989,6 +1037,7 @@ ${prompt ? '\nAdditional requirements: ' + prompt : ''}`;
       authorName,
       documentDate,
       images: uploadedImages.map(img => ({ id: img.id, base64: img.base64 })),
+      videos: uploadedVideos.map(v => ({ id: v.id, base64: v.base64 })),
     };
 
     setRefinePrompt('');
@@ -1279,7 +1328,8 @@ ${prompt ? '\nAdditional requirements: ' + prompt : ''}`;
           },
           body: JSON.stringify({
             markdown: markdownForDownload,
-            images: uploadedImages.map(img => ({ id: img.id, base64: img.base64 }))
+            images: uploadedImages.map(img => ({ id: img.id, base64: img.base64 })),
+            videos: uploadedVideos.map(v => ({ id: v.id, base64: v.base64 }))
           }),
         });
 
@@ -1639,13 +1689,18 @@ ${prompt ? '\nAdditional requirements: ' + prompt : ''}`;
                 >
                   {visibleModels.map((m) => (
                     <option key={m.value} value={m.value}>
-                      {m.label}{m.supportsImage ? (locale === 'zh' ? ' · 支持图片' : ' · Vision') : (locale === 'zh' ? ' · 仅文本' : ' · Text')}
+                      {m.label}{m.supportsVideo ? (locale === 'zh' ? ' · 支持图片+视频' : ' · Vision+Video') : m.supportsImage ? (locale === 'zh' ? ' · 支持图片' : ' · Vision') : (locale === 'zh' ? ' · 仅文本' : ' · Text')}
                     </option>
                   ))}
                 </select>
                 {hasImages && (
                   <p className="mt-2 text-xs text-gray-500">
                     {text('modelHintVisionOnly')}
+                  </p>
+                )}
+                {!hasImages && hasVideos && (
+                  <p className="mt-2 text-xs text-gray-500">
+                    {text('modelHintVideoOnly')}
                   </p>
                 )}
               </div>
@@ -1883,6 +1938,60 @@ ${prompt ? '\nAdditional requirements: ' + prompt : ''}`;
               accept="image/*"
               multiple
               onChange={handleImageUpload}
+              className="hidden"
+            />
+          </div>
+          {/* Video Upload Section */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div className="flex flex-col mb-4 gap-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-gray-800">
+                  <Video className="w-5 h-5 text-gray-500" />
+                  <h2 className="text-lg font-semibold">{locale === 'zh' ? '上传视频 (可选)' : 'Videos (Optional)'}</h2>
+                </div>
+                <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
+                  {locale === 'zh' ? '仅支持 MiMo-v2.5 / MiMo-Omni 模型' : 'Only MiMo-v2.5 / MiMo-Omni supported'}
+                </span>
+              </div>
+              <div className="text-xs text-indigo-600 bg-indigo-50 p-2 rounded-md flex items-start gap-1">
+                <Wand2 className="w-4 h-4 shrink-0" />
+                <span>{locale === 'zh' ? '上传视频后，AI 将会自动分析视频内容并生成结构化文档。支持格式：MP4、MOV、AVI、WMV，单文件最大 300MB。' : 'After you upload videos, the AI will analyze the video content and generate a structured document. Supported formats: MP4, MOV, AVI, WMV, max 300MB per file.'}</span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+              {uploadedVideos.map((vid) => (
+                <div key={vid.id} className="relative group rounded-lg border border-gray-200 overflow-hidden bg-gray-50 p-3">
+                  <div className="flex items-center gap-2">
+                    <Video className="w-8 h-8 text-indigo-400 shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium text-gray-800 truncate">{vid.file.name}</p>
+                      <p className="text-xs text-gray-500">{(vid.file.size / 1024 / 1024).toFixed(1)} MB</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => removeVideo(vid.id)}
+                    className="absolute top-2 right-2 p-1 bg-white/80 hover:bg-red-100 hover:text-red-600 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              ))}
+
+              <button
+                onClick={() => videoInputRef.current?.click()}
+                className="flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-gray-300 hover:border-indigo-500 hover:bg-indigo-50 transition-colors py-6 text-gray-500 hover:text-indigo-600"
+              >
+                <Video className="w-6 h-6" />
+                <span className="text-xs font-medium">{locale === 'zh' ? '添加视频' : 'Add videos'}</span>
+              </button>
+            </div>
+            <input
+              type="file"
+              ref={videoInputRef}
+              accept="video/mp4,video/mov,video/avi,video/wmv"
+              multiple
+              onChange={handleVideoUpload}
               className="hidden"
             />
           </div>

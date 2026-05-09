@@ -372,9 +372,10 @@ export async function POST(req: Request) {
       baseURL: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
     });
 
-    const { prompt, content, model, images, wordCount, writingStyle, eduLevel, perfLevel, addTypos, humanTrace, enableEvidenceSupport, diagramMode, enableSignatureDate, authorName, documentDate, locale, documentType } = await req.json();
+    const { prompt, content, model, images, videos, wordCount, writingStyle, eduLevel, perfLevel, addTypos, humanTrace, enableEvidenceSupport, diagramMode, enableSignatureDate, authorName, documentDate, locale, documentType } = await req.json();
 
     const hasImages = images && images.length > 0;
+    const hasVideos = videos && videos.length > 0;
     const isPaperMode = documentType === 'paper';
     isZh = locale === 'zh';
 
@@ -741,7 +742,26 @@ Available image IDs:\n`
 1. Only use the provided image IDs. Do not invent images or use external URLs.
 2. Never use emojis or decorative symbols.`
       );
-    } else {
+    }
+
+    if (hasVideos) {
+      textPrompt += l(
+        `\n\n【视频分析指令】：用户上传了 ${videos.length} 个视频，你需要仔细分析视频内容，提取关键信息，并生成结构化文档。
+要求：
+1. 根据视频内容生成结构化的文档（如会议纪要、视频摘要、内容大纲等）
+2. 提取视频中的关键对话、要点和重要信息
+3. 按时间线或主题组织内容
+4. 生成的文档应当详实、准确、有条理`,
+        `\n\nVideo analysis instructions: the user uploaded ${videos.length} video(s). Carefully analyze the video content, extract key information, and generate a structured document.
+Requirements:
+1. Generate a structured document based on video content (e.g., meeting notes, video summary, content outline)
+2. Extract key dialogue, main points, and important information
+3. Organize content by timeline or topic
+4. The document should be detailed, accurate, and well-organized`
+      );
+    }
+
+    if (!hasImages && !hasVideos) {
       textPrompt += l(
         `\n\n【重要指令】：绝对不能在文档中使用任何表情符号（Emoji）和图标。`,
         `\n\nImportant: Never use emojis or decorative symbols in the document.`
@@ -790,6 +810,19 @@ Available image IDs:\n`
               image_url: { url: img.base64 }
             });
         });
+    }
+
+    // Video handling: MiMo supports video_url content type
+    if (hasVideos && client === mimoOpenai) {
+      for (const vid of videos as { id: string; base64: string }[]) {
+        const url = await uploadToLitterbox(vid.base64, `${vid.id}.mp4`, 120000);
+        if (url) {
+          userContent.push({
+            type: 'video_url',
+            video_url: { url, fps: 2 }
+          });
+        }
+      }
     }
 
     const completionMessages: OpenAI.ChatCompletionMessageParam[] = [
