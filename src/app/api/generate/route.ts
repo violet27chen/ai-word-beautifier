@@ -190,6 +190,7 @@ function getMimoKeyEntries(): MimoKeyEntry[] {
     { keyEnv: 'MIMO_API_KEY', urlEnv: 'MIMO_BASE_URL', fallbackURL: 'https://token-plan-cn.xiaomimimo.com/v1' },
     { keyEnv: 'MIMO_API_KEY_2', urlEnv: 'MIMO_BASE_URL_2', fallbackURL: 'https://token-plan-sgp.xiaomimimo.com/v1' },
     { keyEnv: 'MIMO_API_KEY_3', urlEnv: 'MIMO_BASE_URL_3', fallbackURL: 'https://token-plan-sgp.xiaomimimo.com/v1' },
+    { keyEnv: 'MIMO_API_KEY_4', urlEnv: 'MIMO_BASE_URL_4', fallbackURL: 'https://token-plan-cn.xiaomimimo.com/v1' },
   ];
   for (const { keyEnv, urlEnv, fallbackURL } of defaults) {
     const key = (process.env[keyEnv] || '').trim();
