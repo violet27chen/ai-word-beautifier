@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { trackAdminEvent } from '@/lib/admin-metrics';
-import { saveImageToRedis } from '@/lib/redis';
+import { saveImage } from '@/lib/image-store';
 
 export const maxDuration = 300; // Allow 5 mins for large models + vision
 
@@ -756,7 +756,7 @@ Available image IDs:\n`
     if (hasImages && client === mimoOpenai) {
       const origin = new URL(req.url).origin;
       for (const img of images as { id: string; base64: string }[]) {
-        await saveImageToRedis(img.id, img.base64);
+        await saveImage(img.id, img.base64);
         const imageUrl = `${origin}/api/images/${img.id}`;
         userContent.push({
           type: 'image_url',

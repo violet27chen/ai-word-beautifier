@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getImageFromRedis } from '@/lib/redis';
+import { getImage } from '@/lib/image-store';
 
 export async function GET(
   _req: Request,
@@ -7,12 +7,11 @@ export async function GET(
 ) {
   const { id } = await params;
 
-  // Validate id format to prevent path traversal
   if (!id || !/^img_[a-z0-9_]+$/.test(id)) {
     return NextResponse.json({ error: 'Invalid image id' }, { status: 400 });
   }
 
-  const data = await getImageFromRedis(id);
+  const data = getImage(id);
 
   if (!data) {
     return NextResponse.json({ error: 'Image not found or expired' }, { status: 404 });
@@ -21,7 +20,7 @@ export async function GET(
   return new NextResponse(data, {
     headers: {
       'Content-Type': 'image/png',
-      'Cache-Control': 'public, max-age=600',
+      'Cache-Control': 'no-store',
       'Access-Control-Allow-Origin': '*',
     },
   });
