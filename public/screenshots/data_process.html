@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #1a1a2e; display: flex; justify-content: center; align-items: center; min-height: 100vh; font-family: 'Consolas', 'Monaco', monospace; }
+.window { width: 750px; border-radius: 10px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.5); }
+.titlebar { background: #2d2d44; padding: 10px 15px; display: flex; align-items: center; gap: 8px; }
+.dot { width: 12px; height: 12px; border-radius: 50%; }
+.dot.red { background: #ff5f56; }
+.dot.yellow { background: #ffbd2e; }
+.dot.green { background: #27c93f; }
+.title { color: #888; margin-left: 10px; font-size: 13px; }
+.code-area { background: #1e1e2e; padding: 20px; }
+.comment { color: #6a9955; }
+.keyword { color: #c586c0; }
+.string { color: #ce9178; }
+.func { color: #dcdcaa; }
+.var { color: #9cdcfe; }
+.num { color: #b5cea8; }
+.output { background: #0d1117; margin-top: 15px; padding: 15px; border-radius: 8px; border-left: 3px solid #569cd6; }
+.output-title { color: #569cd6; font-size: 12px; margin-bottom: 8px; }
+.output-text { color: #e6edf3; font-size: 13px; line-height: 1.6; }
+.highlight { color: #ffa657; }
+.success { color: #27c93f; }
+</style>
+</head>
+<body>
+<div class="window">
+  <div class="titlebar">
+    <div class="dot red"></div>
+    <div class="dot yellow"></div>
+    <div class="dot green"></div>
+    <span class="title">data_processor.py — Excel批量数据处理</span>
+  </div>
+  <div class="code-area">
+    <pre style="color:#d4d4d4;font-size:14px;line-height:1.7">
+<span class="keyword">import</span> pandas <span class="keyword">as</span> pd
+<span class="keyword">import</span> os, glob
+
+<span class="comment"># 批量合并Excel文件 + 数据清洗 + 自动生成报表</span>
+<span class="keyword">def</span> <span class="func">batch_process</span>(folder):
+    all_files = <span class="func">glob.glob</span>(<span class="string">f"{folder}/*.xlsx"</span>)
+    dfs = []
+    <span class="keyword">for</span> f <span class="keyword">in</span> all_files:
+        df = pd.<span class="func">read_excel</span>(f)
+        df[<span class="string">"来源"</span>] = os.path.<span class="func">basename</span>(f)
+        dfs.<span class="func">append</span>(df)
+    merged = pd.<span class="func">concat</span>(dfs, ignore_index=<span class="keyword">True</span>)
+    <span class="comment"># 数据清洗</span>
+    merged = merged.<span class="func">drop_duplicates</span>()
+    merged = merged.<span class="func">dropna</span>(subset=[<span class="string">"姓名"</span>, <span class="string">"电话"</span>])
+    merged[<span class="string">"电话"</span>] = merged[<span class="string">"电话"</span>].<span class="func">astype</span>(str).str.<span class="func">replace</span>(<span class="string">r"\D"</span>, <span class="string">""</span>, regex=<span class="keyword">True</span>)
+    <span class="comment"># 生成汇总报表</span>
+    summary = merged.<span class="func">groupby</span>(<span class="string">"来源"</span>).<span class="func">agg</span>(
+        计数=(<span class="string">"姓名"</span>, <span class="string">"count"</span>),
+        唯一电话=(<span class="string">"电话"</span>, <span class="string">"nunique"</span>)
+    )
+    <span class="keyword">with</span> pd.<span class="func">ExcelWriter</span>(<span class="string">"汇总报表.xlsx"</span>) <span class="keyword">as</span> writer:
+        merged.<span class="func">to_excel</span>(writer, sheet_name=<span class="string">"明细"</span>, index=<span class="keyword">False</span>)
+        summary.<span class="func">to_excel</span>(writer, sheet_name=<span class="string">"汇总"</span>)
+    <span class="keyword">return</span> merged, summary</pre>
+
+    <div class="output">
+      <div class="output-title">▶ 运行结果</div>
+      <div class="output-text">
+        <span class="highlight">$ python data_processor.py</span><br><br>
+        📂 扫描文件夹: <span class="success">./data/</span><br>
+        📄 发现 <span class="success">12</span> 个Excel文件<br>
+        📊 合并数据: <span class="success">15,847</span> 行<br>
+        🧹 去重: 删除 <span class="success">2,103</span> 条重复记录<br>
+        🧹 清洗: 修复 <span class="success">386</span> 条无效电话号码<br>
+        ✅ 最终有效数据: <span class="success">13,744</span> 行<br><br>
+        📁 已保存至: <span class="highlight">汇总报表.xlsx</span><br>
+        &nbsp;&nbsp;&nbsp;├─ Sheet1: 明细 (<span class="num">13,744</span> 行)<br>
+        &nbsp;&nbsp;&nbsp;└─ Sheet2: 汇总 (<span class="num">12</span> 个分组)<br>
+        ⏱ 耗时: <span class="num">3.8</span>秒
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

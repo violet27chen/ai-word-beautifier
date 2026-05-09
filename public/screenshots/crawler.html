@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #1a1a2e; display: flex; justify-content: center; align-items: center; min-height: 100vh; font-family: 'Consolas', 'Monaco', monospace; }
+.window { width: 750px; border-radius: 10px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.5); }
+.titlebar { background: #2d2d44; padding: 10px 15px; display: flex; align-items: center; gap: 8px; }
+.dot { width: 12px; height: 12px; border-radius: 50%; }
+.dot.red { background: #ff5f56; }
+.dot.yellow { background: #ffbd2e; }
+.dot.green { background: #27c93f; }
+.title { color: #888; margin-left: 10px; font-size: 13px; }
+.code-area { background: #1e1e2e; padding: 20px; }
+.comment { color: #6a9955; }
+.keyword { color: #c586c0; }
+.string { color: #ce9178; }
+.func { color: #dcdcaa; }
+.var { color: #9cdcfe; }
+.num { color: #b5cea8; }
+.op { color: #d4d4d4; }
+.output { background: #0d1117; margin-top: 15px; padding: 15px; border-radius: 8px; border-left: 3px solid #27c93f; }
+.output-title { color: #27c93f; font-size: 12px; margin-bottom: 8px; }
+.output-text { color: #e6edf3; font-size: 13px; line-height: 1.6; }
+.highlight { color: #ffa657; }
+.success { color: #27c93f; }
+</style>
+</head>
+<body>
+<div class="window">
+  <div class="titlebar">
+    <div class="dot red"></div>
+    <div class="dot yellow"></div>
+    <div class="dot green"></div>
+    <span class="title">crawler_demo.py — 爬虫采集脚本</span>
+  </div>
+  <div class="code-area">
+    <pre style="color:#d4d4d4;font-size:14px;line-height:1.7">
+<span class="keyword">import</span> requests
+<span class="keyword">from</span> bs4 <span class="keyword">import</span> BeautifulSoup
+<span class="keyword">import</span> pandas <span class="keyword">as</span> pd
+
+<span class="comment"># 电商商品数据采集脚本</span>
+<span class="keyword">def</span> <span class="func">crawl_products</span>(keyword, pages=<span class="num">5</span>):
+    results = []
+    <span class="keyword">for</span> page <span class="keyword">in</span> <span class="func">range</span>(<span class="num">1</span>, pages+<span class="num">1</span>):
+        url = <span class="string">f"https://example.com/search?q={keyword}&p={page}"</span>
+        resp = requests.<span class="func">get</span>(url, headers=headers)
+        soup = <span class="func">BeautifulSoup</span>(resp.text, <span class="string">"html.parser"</span>)
+        items = soup.<span class="func">select</span>(<span class="string">".product-item"</span>)
+        <span class="keyword">for</span> item <span class="keyword">in</span> items:
+            results.<span class="func">append</span>({
+                <span class="string">"title"</span>: item.<span class="func">select_one</span>(<span class="string">".title"</span>).text,
+                <span class="string">"price"</span>: item.<span class="func">select_one</span>(<span class="string">".price"</span>).text,
+                <span class="string">"sales"</span>: item.<span class="func">select_one</span>(<span class="string">".sales"</span>).text,
+            })
+    df = pd.<span class="func">DataFrame</span>(results)
+    df.<span class="func">to_excel</span>(<span class="string">"商品数据.xlsx"</span>, index=<span class="keyword">False</span>)
+    <span class="keyword">return</span> df</pre>
+
+    <div class="output">
+      <div class="output-title">▶ 运行结果</div>
+      <div class="output-text">
+        <span class="highlight">$ python crawler_demo.py</span><br><br>
+        ✅ 正在采集关键词: <span class="success">"蓝牙耳机"</span><br>
+        📄 第1页: 采集到 <span class="success">48</span> 条数据<br>
+        📄 第2页: 采集到 <span class="success">45</span> 条数据<br>
+        📄 第3页: 采集到 <span class="success">50</span> 条数据<br>
+        📄 第4页: 采集到 <span class="success">47</span> 条数据<br>
+        📄 第5页: 采集到 <span class="success">43</span> 条数据<br><br>
+        🎉 共采集 <span class="success">233</span> 条商品数据<br>
+        📁 已保存至: <span class="highlight">商品数据.xlsx</span><br>
+        ⏱ 耗时: <span class="num">12.3</span>秒
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

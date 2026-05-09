@@ -303,6 +303,23 @@ export default function Home() {
   const [refinePrompt, setRefinePrompt] = useState('');
   const [diagramMode, setDiagramMode] = useState('none');
 
+  // Paper mode state
+  const [appMode, setAppMode] = useState<'formatter' | 'paper'>('formatter');
+  const [paperTitle, setPaperTitle] = useState('');
+  const [paperSubtitle, setPaperSubtitle] = useState('');
+  const [paperAuthor, setPaperAuthor] = useState('');
+  const [paperStudentId, setPaperStudentId] = useState('');
+  const [paperMajor, setPaperMajor] = useState('');
+  const [paperAdvisor, setPaperAdvisor] = useState('');
+  const [paperInstitution, setPaperInstitution] = useState('');
+  const [paperDate, setPaperDate] = useState('');
+  const [paperAbstractCn, setPaperAbstractCn] = useState('');
+  const [paperAbstractEn, setPaperAbstractEn] = useState('');
+  const [paperKeywordsCn, setPaperKeywordsCn] = useState('');
+  const [paperKeywordsEn, setPaperKeywordsEn] = useState('');
+  const [paperTemplateType, setPaperTemplateType] = useState<'bachelor' | 'master' | 'journal'>('bachelor');
+  const [paperReferences, setPaperReferences] = useState('');
+
   useEffect(() => {
     window.localStorage.setItem(LOCALE_STORAGE_KEY, locale);
   }, [locale]);
@@ -382,6 +399,24 @@ export default function Home() {
       privacyTitle: 'Privacy Policy',
       agreementTitle: 'Terms of Service',
       footerBrand: 'AI Document Formatter',
+      navPaper: 'Paper Generator',
+      paperTitle: 'Title *',
+      paperSubtitle: 'Subtitle',
+      paperAuthor: 'Author *',
+      paperStudentId: 'Student ID',
+      paperMajor: 'Major',
+      paperAdvisor: 'Advisor',
+      paperInstitution: 'Institution',
+      paperDate: 'Date',
+      paperAbstractCn: 'Chinese Abstract *',
+      paperAbstractEn: 'English Abstract *',
+      paperKeywordsCn: 'Chinese Keywords * (comma separated)',
+      paperKeywordsEn: 'English Keywords * (comma separated)',
+      paperTemplateType: 'Paper Type',
+      paperReferences: 'References (one per line)',
+      paperGenerateButton: 'Generate Paper',
+      paperDownloadButton: 'Download Paper .docx',
+      paperMetadata: 'Paper Metadata',
     };
 
     const zh: Record<string, string> = {
@@ -458,6 +493,24 @@ export default function Home() {
       privacyTitle: '隐私政策',
       agreementTitle: '用户协议',
       footerBrand: 'AI Word 排版美化助手',
+      navPaper: '论文生成',
+      paperTitle: '论文标题 *',
+      paperSubtitle: '副标题',
+      paperAuthor: '作者 *',
+      paperStudentId: '学号',
+      paperMajor: '专业',
+      paperAdvisor: '指导教师',
+      paperInstitution: '学校',
+      paperDate: '日期',
+      paperAbstractCn: '中文摘要 *',
+      paperAbstractEn: '英文摘要 *',
+      paperKeywordsCn: '中文关键词 *（逗号分隔）',
+      paperKeywordsEn: '英文关键词 *（逗号分隔）',
+      paperTemplateType: '论文类型',
+      paperReferences: '参考文献（每行一条）',
+      paperGenerateButton: '生成论文',
+      paperDownloadButton: '下载论文 .docx',
+      paperMetadata: '论文信息',
     };
 
     const dict = locale === 'zh' ? zh : en;
@@ -817,6 +870,71 @@ export default function Home() {
   };
 
   const handleGenerate = async () => {
+    if (appMode === 'paper') {
+      // Paper mode validation
+      if (!paperTitle.trim()) {
+        setError(locale === 'zh' ? '请输入论文标题' : 'Please enter paper title');
+        return;
+      }
+      if (!paperAuthor.trim()) {
+        setError(locale === 'zh' ? '请输入作者' : 'Please enter author name');
+        return;
+      }
+      if (!paperAbstractCn.trim()) {
+        setError(locale === 'zh' ? '请输入中文摘要' : 'Please enter Chinese abstract');
+        return;
+      }
+      if (!paperAbstractEn.trim()) {
+        setError(locale === 'zh' ? '请输入英文摘要' : 'Please enter English abstract');
+        return;
+      }
+
+      // Build paper prompt from metadata
+      const paperPrompt = locale === 'zh'
+        ? `请为我生成一篇学术论文的正文内容。
+论文主题：${paperTitle}${paperSubtitle ? '\n副标题：' + paperSubtitle : ''}
+作者：${paperAuthor}
+${paperInstitution ? '学校：' + paperInstitution : ''}
+${paperMajor ? '专业：' + paperMajor : ''}
+
+中文摘要：${paperAbstractCn}
+英文摘要：${paperAbstractEn}
+中文关键词：${paperKeywordsCn}
+英文关键词：${paperKeywordsEn}
+论文类型：${paperTemplateType === 'master' ? '硕士学位论文' : paperTemplateType === 'journal' ? '期刊论文' : '本科毕业论文'}
+${prompt ? '\n补充要求：' + prompt : ''}`
+        : `Please generate an academic paper body.
+Topic: ${paperTitle}${paperSubtitle ? '\nSubtitle: ' + paperSubtitle : ''}
+Author: ${paperAuthor}
+${paperInstitution ? 'Institution: ' + paperInstitution : ''}
+${paperMajor ? 'Major: ' + paperMajor : ''}
+
+Chinese Abstract: ${paperAbstractCn}
+English Abstract: ${paperAbstractEn}
+Chinese Keywords: ${paperKeywordsCn}
+English Keywords: ${paperKeywordsEn}
+Paper Type: ${paperTemplateType}
+${prompt ? '\nAdditional requirements: ' + prompt : ''}`;
+
+      const payload = {
+        prompt: paperPrompt,
+        content: '',
+        model,
+        locale,
+        documentType: 'paper' as const,
+        wordCount,
+        images: uploadedImages.map(img => ({ id: img.id, base64: img.base64 })),
+      };
+
+      await executeGenerate(
+        payload,
+        locale === 'zh' ? '正在分析论文需求...' : 'Analyzing paper requirements...',
+        locale === 'zh' ? '正在生成论文正文...' : 'Generating paper content...'
+      );
+      return;
+    }
+
+    // Original formatter mode
     if (!prompt.trim()) {
       setError(text('errorNeedPrompt'));
       return;
@@ -1105,35 +1223,83 @@ export default function Home() {
     setError(null);
     
     try {
-      let markdownForDownload = normalizeSignatureBlockForDownload(cleanMarkdown);
-      markdownForDownload = await convertMermaidBlocksToImages(markdownForDownload);
-      const response = await fetch('/api/download', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          markdown: markdownForDownload,
-          images: uploadedImages.map(img => ({ id: img.id, base64: img.base64 }))
-        }),
-      });
+      if (appMode === 'paper') {
+        // Paper mode: use /api/download-paper
+        const keywordsCnArray = paperKeywordsCn.split(/[,，]/).map(s => s.trim()).filter(Boolean);
+        const keywordsEnArray = paperKeywordsEn.split(/[,;]/).map(s => s.trim()).filter(Boolean);
+        const referencesArray = paperReferences.split(/\n/).map(s => s.trim()).filter(Boolean);
 
-      if (!response.ok) {
-        throw new Error(text('errorDownload'));
+        const response = await fetch('/api/download-paper', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title: paperTitle,
+            subtitle: paperSubtitle || undefined,
+            author: paperAuthor,
+            studentId: paperStudentId || undefined,
+            major: paperMajor || undefined,
+            advisor: paperAdvisor || undefined,
+            institution: paperInstitution || undefined,
+            date: paperDate || undefined,
+            abstractCn: paperAbstractCn,
+            abstractEn: paperAbstractEn,
+            keywordsCn: keywordsCnArray,
+            keywordsEn: keywordsEnArray,
+            content: cleanMarkdown,
+            references: referencesArray.length > 0 ? referencesArray : undefined,
+            templateType: paperTemplateType,
+          }),
+        });
+
+        if (!response.ok) {
+          const errData = await response.json().catch(() => ({}));
+          throw new Error(errData.error || text('errorDownload'));
+        }
+
+        const blob = await response.blob();
+        const serverFileName = getFileNameFromDisposition(response.headers.get('content-disposition'));
+        const fallbackFileName = `${sanitizeFileName(paperTitle || '论文')}.docx`;
+        const finalFileName = sanitizeFileName((serverFileName || fallbackFileName).replace(/\.docx$/i, '')) + '.docx';
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = finalFileName;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      } else {
+        // Formatter mode: use original /api/download
+        let markdownForDownload = normalizeSignatureBlockForDownload(cleanMarkdown);
+        markdownForDownload = await convertMermaidBlocksToImages(markdownForDownload);
+        const response = await fetch('/api/download', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            markdown: markdownForDownload,
+            images: uploadedImages.map(img => ({ id: img.id, base64: img.base64 }))
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error(text('errorDownload'));
+        }
+
+        const blob = await response.blob();
+        const serverFileName = getFileNameFromDisposition(response.headers.get('content-disposition'));
+        const fallbackFileName = `${sanitizeFileName(extractTitleFromMarkdown(markdownForDownload))}.docx`;
+        const finalFileName = sanitizeFileName((serverFileName || fallbackFileName).replace(/\.docx$/i, '')) + '.docx';
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = finalFileName;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
       }
-
-      const blob = await response.blob();
-      const serverFileName = getFileNameFromDisposition(response.headers.get('content-disposition'));
-      const fallbackFileName = `${sanitizeFileName(extractTitleFromMarkdown(markdownForDownload))}.docx`;
-      const finalFileName = sanitizeFileName((serverFileName || fallbackFileName).replace(/\.docx$/i, '')) + '.docx';
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = finalFileName;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
 
       setSuccess(true);
     } catch (err) {
@@ -1201,8 +1367,27 @@ export default function Home() {
             <h1 className="text-xl font-bold text-gray-900">{text('appTitle')}</h1>
           </div>
           <div className="flex items-center gap-3">
-            <div className="rounded-lg bg-gray-100 px-3 py-1.5 text-sm font-medium text-indigo-700">
-              {text('navFormatter')}
+            <div className="hidden md:flex rounded-lg bg-gray-100 p-1">
+              <button
+                type="button"
+                onClick={() => setAppMode('formatter')}
+                className={cn(
+                  'px-3 py-1.5 rounded-md text-sm font-medium transition-colors',
+                  appMode === 'formatter' ? 'bg-white text-indigo-700 shadow-sm' : 'text-gray-600 hover:text-gray-900'
+                )}
+              >
+                {text('navFormatter')}
+              </button>
+              <button
+                type="button"
+                onClick={() => setAppMode('paper')}
+                className={cn(
+                  'px-3 py-1.5 rounded-md text-sm font-medium transition-colors',
+                  appMode === 'paper' ? 'bg-white text-indigo-700 shadow-sm' : 'text-gray-600 hover:text-gray-900'
+                )}
+              >
+                {text('navPaper')}
+              </button>
             </div>
             <div className="hidden md:flex rounded-lg bg-gray-100 p-1">
               <button
@@ -1479,7 +1664,113 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Content Card */}
+          {/* Paper Metadata Card - Only shown in paper mode */}
+          {appMode === 'paper' && (
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <h2 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+              <FileText className="w-5 h-5 text-indigo-500" />
+              {text('paperMetadata')}
+            </h2>
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{text('paperTitle')}</label>
+                  <input type="text" value={paperTitle} onChange={(e) => setPaperTitle(e.target.value)}
+                    className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:ring-1 focus:ring-indigo-500 outline-none bg-white" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{text('paperSubtitle')}</label>
+                  <input type="text" value={paperSubtitle} onChange={(e) => setPaperSubtitle(e.target.value)}
+                    className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:ring-1 focus:ring-indigo-500 outline-none bg-white" />
+                </div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{text('paperAuthor')}</label>
+                  <input type="text" value={paperAuthor} onChange={(e) => setPaperAuthor(e.target.value)}
+                    className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:ring-1 focus:ring-indigo-500 outline-none bg-white" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{text('paperStudentId')}</label>
+                  <input type="text" value={paperStudentId} onChange={(e) => setPaperStudentId(e.target.value)}
+                    className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:ring-1 focus:ring-indigo-500 outline-none bg-white" />
+                </div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{text('paperMajor')}</label>
+                  <input type="text" value={paperMajor} onChange={(e) => setPaperMajor(e.target.value)}
+                    className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:ring-1 focus:ring-indigo-500 outline-none bg-white" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{text('paperAdvisor')}</label>
+                  <input type="text" value={paperAdvisor} onChange={(e) => setPaperAdvisor(e.target.value)}
+                    className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:ring-1 focus:ring-indigo-500 outline-none bg-white" />
+                </div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{text('paperInstitution')}</label>
+                  <input type="text" value={paperInstitution} onChange={(e) => setPaperInstitution(e.target.value)}
+                    className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:ring-1 focus:ring-indigo-500 outline-none bg-white" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{text('paperDate')}</label>
+                  <input type="text" value={paperDate} onChange={(e) => setPaperDate(e.target.value)}
+                    placeholder={locale === 'zh' ? '例如: 2026年5月' : 'e.g. May 2026'}
+                    className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:ring-1 focus:ring-indigo-500 outline-none bg-white" />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{text('paperTemplateType')}</label>
+                <select value={paperTemplateType} onChange={(e) => setPaperTemplateType(e.target.value as 'bachelor' | 'master' | 'journal')}
+                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:ring-1 focus:ring-indigo-500 outline-none bg-white">
+                  <option value="bachelor">{locale === 'zh' ? '本科毕业论文' : 'Bachelor Thesis'}</option>
+                  <option value="master">{locale === 'zh' ? '硕士学位论文' : 'Master Thesis'}</option>
+                  <option value="journal">{locale === 'zh' ? '期刊论文' : 'Journal Paper'}</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{text('paperAbstractCn')}</label>
+                <textarea value={paperAbstractCn} onChange={(e) => setPaperAbstractCn(e.target.value)}
+                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:ring-1 focus:ring-indigo-500 outline-none bg-white resize-none" rows={3} />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{text('paperAbstractEn')}</label>
+                <textarea value={paperAbstractEn} onChange={(e) => setPaperAbstractEn(e.target.value)}
+                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:ring-1 focus:ring-indigo-500 outline-none bg-white resize-none" rows={3} />
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{text('paperKeywordsCn')}</label>
+                  <input type="text" value={paperKeywordsCn} onChange={(e) => setPaperKeywordsCn(e.target.value)}
+                    className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:ring-1 focus:ring-indigo-500 outline-none bg-white" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{text('paperKeywordsEn')}</label>
+                  <input type="text" value={paperKeywordsEn} onChange={(e) => setPaperKeywordsEn(e.target.value)}
+                    className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:ring-1 focus:ring-indigo-500 outline-none bg-white" />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{text('paperReferences')}</label>
+                <textarea value={paperReferences} onChange={(e) => setPaperReferences(e.target.value)}
+                  placeholder={locale === 'zh' ? '每行一条，例如：\n[1] 作者. 标题[J]. 期刊名, 年份, 卷(期): 页码.\n[2] 作者. 书名[M]. 出版社, 年份.' : 'One per line'}
+                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:ring-1 focus:ring-indigo-500 outline-none bg-white resize-none font-mono" rows={4} />
+              </div>
+              {/* Additional prompt for paper mode */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{text('promptLabel')}</label>
+                <textarea value={prompt} onChange={(e) => setPrompt(e.target.value)}
+                  placeholder={locale === 'zh' ? '可选：对论文正文的额外要求，如特定章节内容、写作风格等...' : 'Optional: additional requirements for the paper body...'}
+                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:ring-1 focus:ring-indigo-500 outline-none bg-white resize-none" rows={3} />
+              </div>
+            </div>
+          </div>
+          )}
+
+          {/* Content Card - Hidden in paper mode */}
+          {appMode !== 'paper' && (<>
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
             <div 
               className="p-6 cursor-pointer hover:bg-gray-50 transition-colors flex items-center justify-between"
@@ -1595,6 +1886,7 @@ export default function Home() {
               className="hidden"
             />
           </div>
+          </>)}
           </div>
 
           {/* Right Column: Actions & Status */}
