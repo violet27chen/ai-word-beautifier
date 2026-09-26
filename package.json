@@ -29,7 +29,7 @@
     "marked": "^18.0.0",
     "mermaid": "^11.12.1",
     "mysql2": "^3.22.3",
-    "next": "16.2.3",
+    "next": "16.3.6",
     "openai": "^6.34.0",
     "plyr": "^3.8.4",
     "react": "19.2.4",
@@ -44,7 +44,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
-    "eslint-config-next": "16.2.3",
+    "eslint-config-next": "16.3.6",
     "tailwindcss": "^4",
     "typescript": "^5",
     "wrangler": "^4.141.0"
