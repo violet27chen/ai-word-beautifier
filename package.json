@@ -7,7 +7,10 @@
   },
   "scripts": {
     "dev": "next dev",
-    "build": "next build --webpack",
+    "build": "opennextjs-cloudflare build",
+    "build:next": "next build --webpack",
+    "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
+    "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
     "start": "next start -p ${PORT:-3000}",
     "lint": "eslint"
   },
@@ -34,6 +37,7 @@
     "tailwind-merge": "^3.5.0"
   },
   "devDependencies": {
+    "@opennextjs/cloudflare": "^1.20.6",
     "@tailwindcss/postcss": "^4",
     "@types/marked": "^5.0.2",
     "@types/node": "^20",
@@ -42,6 +46,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.2.3",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "wrangler": "^4.141.0"
   }
 }
