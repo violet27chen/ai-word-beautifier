@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #1a1a2e; display: flex; justify-content: center; align-items: center; min-height: 100vh; font-family: 'Consolas', 'Monaco', monospace; }
+.window { width: 750px; border-radius: 10px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.5); }
+.titlebar { background: #2d2d44; padding: 10px 15px; display: flex; align-items: center; gap: 8px; }
+.dot { width: 12px; height: 12px; border-radius: 50%; }
+.dot.red { background: #ff5f56; }
+.dot.yellow { background: #ffbd2e; }
+.dot.green { background: #27c93f; }
+.title { color: #888; margin-left: 10px; font-size: 13px; }
+.code-area { background: #1e1e2e; padding: 20px; }
+.comment { color: #6a9955; }
+.keyword { color: #c586c0; }
+.string { color: #ce9178; }
+.func { color: #dcdcaa; }
+.var { color: #9cdcfe; }
+.num { color: #b5cea8; }
+.output { background: #0d1117; margin-top: 15px; padding: 15px; border-radius: 8px; border-left: 3px solid #ffa657; }
+.output-title { color: #ffa657; font-size: 12px; margin-bottom: 8px; }
+.output-text { color: #e6edf3; font-size: 13px; line-height: 1.6; }
+.highlight { color: #ffa657; }
+.success { color: #27c93f; }
+</style>
+</head>
+<body>
+<div class="window">
+  <div class="titlebar">
+    <div class="dot red"></div>
+    <div class="dot yellow"></div>
+    <div class="dot green"></div>
+    <span class="title">auto_report.py — 定时自动报表 + 邮件发送</span>
+  </div>
+  <div class="code-area">
+    <pre style="color:#d4d4d4;font-size:14px;line-height:1.7">
+<span class="keyword">import</span> schedule, time, smtplib
+<span class="keyword">from</span> email.mime.multipart <span class="keyword">import</span> MIMEMultipart
+<span class="keyword">from</span> email.mime.base <span class="keyword">import</span> MIMEBase
+<span class="keyword">import</span> pandas <span class="keyword">as</span> pd
+
+<span class="comment"># 自动生成日报 + 邮件发送 (可定时执行)</span>
+<span class="keyword">def</span> <span class="func">generate_daily_report</span>():
+    <span class="comment"># 从数据库/API拉取数据</span>
+    df = pd.<span class="func">read_sql</span>(<span class="string">"SELECT * FROM sales WHERE date=CURDATE()"</span>, conn)
+    report = df.<span class="func">groupby</span>(<span class="string">"region"</span>).<span class="func">agg</span>(
+        订单数=(<span class="string">"order_id"</span>, <span class="string">"count"</span>),
+        总金额=(<span class="string">"amount"</span>, <span class="string">"sum"</span>),
+        客单价=(<span class="string">"amount"</span>, <span class="string">"mean"</span>)
+    ).<span class="func">round</span>(<span class="num">2</span>)
+    <span class="comment"># 保存Excel</span>
+    filename = <span class="string">f"日报_{today}.xlsx"</span>
+    report.<span class="func">to_excel</span>(filename)
+    <span class="comment"># 自动发送邮件</span>
+    <span class="func">send_email</span>(<span class="string">"boss@company.com"</span>, <span class="string">"今日销售日报"</span>, filename)
+    <span class="func">print</span>(<span class="string">f"✅ 日报已发送: {filename}"</span>)
+
+<span class="comment"># 每天下午5点自动执行</span>
+schedule.every().day.<span class="func">at</span>(<span class="string">"17:00"</span>).<span class="func">do</span>(generate_daily_report)</pre>
+
+    <div class="output">
+      <div class="output-title">▶ 运行结果</div>
+      <div class="output-text">
+        <span class="highlight">$ python auto_report.py</span><br><br>
+        🕐 定时任务已启动: 每天 17:00 执行<br><br>
+        ── 2026-05-07 执行 ──<br>
+        📊 从数据库拉取今日销售数据...<br>
+        📄 生成报表: <span class="success">日报_2026-05-07.xlsx</span><br>
+        &nbsp;&nbsp;&nbsp;├─ 华东区: <span class="num">156</span> 单, ¥<span class="num">284,500</span><br>
+        &nbsp;&nbsp;&nbsp;├─ 华南区: <span class="num">132</span> 单, ¥<span class="num">215,800</span><br>
+        &nbsp;&nbsp;&nbsp;├─ 华北区: <span class="num">98</span> 单, ¥<span class="num">167,200</span><br>
+        &nbsp;&nbsp;&nbsp;└─ 西部区: <span class="num">67</span> 单, ¥<span class="num">89,300</span><br>
+        📧 邮件已发送至: <span class="highlight">boss@company.com</span><br>
+        ✅ 日报任务完成！
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

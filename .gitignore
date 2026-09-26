@@ -1,0 +1,13 @@
+node_modules/
+.next/
+out/
+dist/
+.vercel/
+*.log
+.env
+.env.*
+.DS_Store
+.env.deploy
+
+# SQLite (replaced by MySQL)
+.data/

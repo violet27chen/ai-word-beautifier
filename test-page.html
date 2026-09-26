@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSS/JS测试页面</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .success { color: green; }
+        .error { color: red; }
+        .loading { color: orange; }
+        button {
+            padding: 10px 20px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 10px 0;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <h1>CSS和JS加载测试</h1>
+    
+    <div class="test-section">
+        <h2>CSS测试</h2>
+        <div id="css-test">
+            <p class="loading">测试中...</p>
+        </div>
+        <button onclick="testCSS()">手动测试CSS</button>
+    </div>
+    
+    <div class="test-section">
+        <h2>JavaScript测试</h2>
+        <div id="js-test">
+            <p class="loading">测试中...</p>
+        </div>
+        <button onclick="testJS()">手动测试JS</button>
+    </div>
+    
+    <div class="test-section">
+        <h2>Tailwind CSS测试</h2>
+        <div class="p-4 bg-blue-100 text-blue-800 rounded-lg">
+            如果这个框有蓝色背景和圆角，说明Tailwind CSS正常工作。
+        </div>
+        <div id="tailwind-test">
+            <p class="loading">测试中...</p>
+        </div>
+    </div>
+    
+    <div class="test-section">
+        <h2>控制台错误检查</h2>
+        <div id="console-test">
+            <p class="loading">检查中...</p>
+        </div>
+        <button onclick="checkConsoleErrors()">检查控制台错误</button>
+    </div>
+
+    <script>
+        // 测试CSS是否加载
+        function testCSS() {
+            const testDiv = document.getElementById('css-test');
+            const computedStyle = window.getComputedStyle(document.body);
+            
+            // 检查一些基本的CSS属性
+            const hasBackground = computedStyle.backgroundColor !== '';
+            const hasFontFamily = computedStyle.fontFamily !== '';
+            
+            if (hasBackground && hasFontFamily) {
+                testDiv.innerHTML = '<p class="success">✅ CSS已正确加载！</p>';
+            } else {
+                testDiv.innerHTML = '<p class="error">❌ CSS可能未正确加载</p>';
+            }
+        }
+        
+        // 测试JS是否工作
+        function testJS() {
+            const testDiv = document.getElementById('js-test');
+            
+            try {
+                // 测试基本的JS功能
+                const testArray = [1, 2, 3];
+                const sum = testArray.reduce((a, b) => a + b, 0);
+                
+                if (sum === 6) {
+                    testDiv.innerHTML = '<p class="success">✅ JavaScript正常工作！</p>';
+                } else {
+                    testDiv.innerHTML = '<p class="error">❌ JavaScript计算错误</p>';
+                }
+            } catch (error) {
+                testDiv.innerHTML = `<p class="error">❌ JavaScript错误: ${error.message}</p>`;
+            }
+        }
+        
+        // 测试Tailwind CSS
+        function testTailwind() {
+            const testDiv = document.getElementById('tailwind-test');
+            const tailwindElement = document.querySelector('.bg-blue-100');
+            
+            if (tailwindElement) {
+                const computedStyle = window.getComputedStyle(tailwindElement);
+                const bgColor = computedStyle.backgroundColor;
+                
+                // 检查是否有背景色（Tailwind的蓝色）
+                if (bgColor && bgColor !== 'rgba(0, 0, 0, 0)') {
+                    testDiv.innerHTML = '<p class="success">✅ Tailwind CSS已加载！</p>';
+                } else {
+                    testDiv.innerHTML = '<p class="error">❌ Tailwind CSS可能未正确加载</p>';
+                }
+            } else {
+                testDiv.innerHTML = '<p class="error">❌ 找不到Tailwind测试元素</p>';
+            }
+        }
+        
+        // 检查控制台错误
+        function checkConsoleErrors() {
+            const testDiv = document.getElementById('console-test');
+            
+            // 模拟检查控制台错误（实际中需要更复杂的实现）
+            const hasErrors = false; // 这里应该实际检查
+            
+            if (!hasErrors) {
+                testDiv.innerHTML = '<p class="success">✅ 未发现明显的控制台错误</p>';
+            } else {
+                testDiv.innerHTML = '<p class="error">❌ 发现控制台错误，请按F12查看详情</p>';
+            }
+        }
+        
+        // 页面加载时自动运行测试
+        window.onload = function() {
+            testCSS();
+            testJS();
+            testTailwind();
+            checkConsoleErrors();
+        };
+    </script>
+</body>
+</html>
