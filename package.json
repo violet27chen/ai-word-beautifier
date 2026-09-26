@@ -7,7 +7,7 @@
   },
   "scripts": {
     "dev": "next dev",
-    "build": "next build --webpack",
+    "build": "opennextjs-cloudflare build",
     "build:cloudflare": "opennextjs-cloudflare build",
     "build:next": "next build --webpack",
     "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
