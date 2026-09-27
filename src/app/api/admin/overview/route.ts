@@ -21,10 +21,15 @@ export async function GET(req: Request) {
   if (!getAdminPassword() || !validateAdmin(req)) {
     return NextResponse.json({ error: '管理后台认证失败' }, { status: 401 });
   }
-  return NextResponse.json({
-    project: 'AI Word 排版美化助手',
-    now: new Date().toISOString(),
-    envStatus: buildEnvStatus(),
-    overview: await getAdminOverview(),
-  });
+  try {
+    return NextResponse.json({
+      project: 'AI Word 排版美化助手',
+      now: new Date().toISOString(),
+      envStatus: buildEnvStatus(),
+      overview: await getAdminOverview(),
+    });
+  } catch (error) {
+    console.error('Admin overview query failed:', error);
+    return NextResponse.json({ error: '读取管理统计失败' }, { status: 500 });
+  }
 }
