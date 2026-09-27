@@ -10,6 +10,13 @@
     "directory": ".open-next/assets",
     "binding": "ASSETS"
   },
+  "d1_databases": [
+    {
+      "binding": "ADMIN_DB",
+      "database_name": "ai-word-admin",
+      "database_id": "ebe512df-6df5-4ea1-8464-b83fa4d32ddb"
+    }
+  ],
   "services": [
     {
       "binding": "WORKER_SELF_REFERENCE",

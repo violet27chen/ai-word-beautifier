@@ -113,13 +113,18 @@
 
 ## 指标与数据存储
 
-管理后台的统计数据由服务端写入 MySQL，用于展示：
+管理后台的统计数据由服务端写入数据库，用于展示：
 
 - 生成与下载接口的请求总量、成功/失败与成功率
 - PV/UV（以 `IP + UA` 拼接后截断作为访客键，属于估算指标）
 - 最近请求事件列表（包含模型、是否包含图片、错误信息等）
 
-数据库配置：通过 `MYSQL_HOST`、`MYSQL_PORT`、`MYSQL_USER`、`MYSQL_PASSWORD`、`MYSQL_DATABASE` 指定。
+数据库后端按运行环境自动选择：
+
+- Cloudflare Worker：优先使用绑定名为 `ADMIN_DB` 的 D1 数据库。
+- 本地开发或普通 Node.js 部署：使用 MySQL，配置 `MYSQL_HOST`、`MYSQL_PORT`、`MYSQL_USER`、`MYSQL_PASSWORD`、`MYSQL_DATABASE`。
+
+D1 表会在第一次写入统计数据时自动创建，无需手动执行建表 SQL。
 
 ## API 调用示例
 
@@ -188,6 +193,7 @@ TAVILY_API_KEYS=your_key_4,your_key_5
 
 ```bash
 ADMIN_PASSWORD=your_password
+# 本地开发/Node.js 部署时使用 MySQL
 MYSQL_HOST=127.0.0.1
 MYSQL_PORT=3306
 MYSQL_USER=root
@@ -197,7 +203,21 @@ MYSQL_DATABASE=ai_word
 
 说明：
 - 管理后台接口支持通过请求头 `x-admin-password` 认证；未配置 `ADMIN_PASSWORD` 时后台禁用。
-- 管理统计写入 MySQL，数据库不可用不会阻断生成和下载。
+- 管理统计在 Worker 上写入 D1，在本地或普通 Node.js 部署上写入 MySQL；数据库不可用不会阻断生成和下载。
+
+### Cloudflare Worker 部署
+
+1. 创建 D1 数据库：
+
+   ```bash
+   npx wrangler d1 create ai-word-admin
+   ```
+
+2. 将命令返回的数据库 ID 填入 `wrangler.jsonc` 的 `ADMIN_DB` 绑定，保持绑定名为 `ADMIN_DB`。
+3. 在 Cloudflare Worker 的运行时变量/密钥中配置 `ADMIN_PASSWORD`、`DEEPSEEK_API_KEY` 等环境变量。不要把密钥写入 `wrangler.jsonc`。
+4. 使用现有 Workers Builds 配置部署。构建命令为 `npm run build`，部署命令为 `npx wrangler deploy`。
+
+如果你不使用 Worker，则无需创建 D1，继续配置 MySQL 即可。
 
 ## 本地开发
 
@@ -221,7 +241,7 @@ npm run start
 
 ## 部署建议
 
-- 本项目依赖 MySQL 存储管理后台指标数据，部署时请配置数据库连接环境变量。
+- 管理后台支持 Cloudflare D1 与 MySQL 双后端：Worker 使用 D1，Node.js 使用 MySQL。
 - 如果数据库不可用，主生成和下载流程仍会继续，但管理后台统计不会写入。
 - 如需对外提供管理后台，请务必配置 `ADMIN_PASSWORD` 并使用强密码。
 

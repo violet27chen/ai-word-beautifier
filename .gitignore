@@ -9,6 +9,7 @@ dist/
 .env.*
 .DS_Store
 .env.deploy
+worker-configuration.d.ts
 
 # SQLite (replaced by MySQL)
 .data/
