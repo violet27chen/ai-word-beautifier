@@ -22,6 +22,8 @@
 - **可选资料检索增强**：开启后可通过 MCP Search Endpoint 拉取最新资料条目并注入提示词，生成带参考资料编号的内容。
 - **可选图示生成**：支持自动生成思维导图/流程图（Mermaid），并在前端渲染预览。
 - **一键下载**：生成结果直接导出为标准的 `.docx` 格式文档，开箱即用。
+- **用户账号**：邮箱注册与验证、登录、退出及密码重置；匿名访客仍可使用核心功能。
+- **使用统计**：登录后的生成和下载次数会关联到账号，并可在管理后台查看和停用账号。
 
 ## 技术栈
 
@@ -83,6 +85,14 @@
 响应：
 - `200`：返回 `.docx` 二进制内容，并带 `Content-Disposition` 文件名
 
+### 用户账号接口
+
+- `POST /api/auth/register`：注册并发送邮箱验证链接。
+- `POST /api/auth/login`、`POST /api/auth/logout`、`GET /api/auth/me`：登录状态管理。
+- `POST /api/auth/resend`：重发验证邮件。
+- `POST /api/auth/password-reset`：申请密码重置邮件；`POST /api/auth/password-reset/confirm`：提交新密码。
+- 邮箱验证链接由 `GET /api/auth/verify` 处理。用户密码使用 PBKDF2 加盐派生摘要保存；登录会话使用 HttpOnly Cookie。
+
 ### POST /api/admin/visit
 
 用途：记录页面访问，用于管理后台统计 PV/UV（按 `IP + UA` 估算）。
@@ -105,6 +115,7 @@
 
 - `/`：主界面（生成、上传、预览、下载）
 - `/admin`：管理后台页面（需要管理密码）
+- `/account`：邮箱注册、登录、验证提示及密码找回
 - `/api/generate`：生成与润色接口（流式返回）
 - `/api/download`：下载 `.docx` 接口
 - `/api/admin/visit`：访问统计打点
@@ -117,6 +128,7 @@
 - 生成与下载接口的请求总量、成功/失败与成功率
 - PV/UV（以 `IP + UA` 拼接后截断作为访客键，属于估算指标）
 - 最近请求事件列表（包含模型、是否包含图片、错误信息等）
+- 用户数、新增用户、邮箱验证状态、注册/最近登录时间及关联的生成/下载次数
 
 数据库后端按运行环境自动选择：
 
@@ -200,6 +212,18 @@ MYSQL_PASSWORD=your_database_password
 MYSQL_DATABASE=ai_word
 ```
 
+### 邮件发送（用户验证与密码找回必需）
+
+本项目使用 SMTP 隐式 TLS（465 端口），无需 IMAP 接收配置。将下列非敏感配置作为运行时变量；`SMTP_PASSWORD` 必须作为 Secret 保存，禁止写入仓库或 `wrangler.jsonc`：
+
+```bash
+SMTP_HOST=smtp.tinkmail.me
+SMTP_PORT=465
+SMTP_USER=noreply@violet27chen.com
+SMTP_FROM=noreply@violet27chen.com
+SMTP_PASSWORD=replace-with-a-new-tinkmail-client-token
+```
+
 说明：
 - 管理后台接口支持通过请求头 `x-admin-password` 认证；未配置 `ADMIN_PASSWORD` 时后台禁用。
 - 管理统计在 Worker 上写入 D1，在本地或普通 Node.js 部署上写入 MySQL；数据库不可用不会阻断生成和下载。
@@ -213,7 +237,7 @@ MYSQL_DATABASE=ai_word
    ```
 
 2. 将命令返回的数据库 ID 填入 `wrangler.jsonc` 的 `ADMIN_DB` 绑定，保持绑定名为 `ADMIN_DB`。当前仓库已配置数据库 `ai-word-admin`。
-3. 在 Cloudflare Worker 的运行时变量/密钥中配置 `ADMIN_PASSWORD`、`DEEPSEEK_API_KEY` 等环境变量。不要把密钥写入 `wrangler.jsonc`。
+3. 在 Cloudflare Worker 的运行时变量/密钥中配置 `ADMIN_PASSWORD`、`DEEPSEEK_API_KEY`、`SMTP_HOST`、`SMTP_PORT`、`SMTP_USER`、`SMTP_FROM`；为 SMTP 创建独立的 TinkMail Client Token，并将其单独设为 `SMTP_PASSWORD` Secret。不要把令牌写入 `wrangler.jsonc`。
 4. 使用现有 Workers Builds 配置部署。构建命令为 `npm run build`，部署命令为 `npx wrangler deploy`。
 
 如果你不使用 Worker，则无需创建 D1，继续配置 MySQL 即可。

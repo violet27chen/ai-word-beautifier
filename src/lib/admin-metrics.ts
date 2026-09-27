@@ -11,6 +11,7 @@ type AdminEvent = {
   promptLength?: number;
   markdownLength?: number;
   errorMessage?: string;
+  userId?: string | null;
   createdAt: string;
 };
 

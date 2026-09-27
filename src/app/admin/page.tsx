@@ -6,6 +6,7 @@ import Link from 'next/link';
 
 type EnvStatus = {
   deepseek: boolean;
+  smtp: boolean;
   mcpSearch: boolean;
 };
 
@@ -19,6 +20,19 @@ type AdminEvent = {
   errorMessage?: string;
   createdAt: string;
 };
+
+type AdminAccount = {
+  id: string;
+  email: string;
+  status: 'active' | 'disabled';
+  emailVerified: boolean;
+  createdAt: string;
+  lastLoginAt: string | null;
+  generations: number;
+  downloads: number;
+};
+
+type AccountAnalytics = { total: number; active: number; today: number; users: AdminAccount[] };
 
 type TrafficDay = { date: string; visits: number; uniqueVisitors: number };
 type RequestDay = { date: string; generate: number; download: number };
@@ -279,8 +293,10 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [payload, setPayload] = useState<OverviewPayload | null>(null);
+  const [accountAnalytics, setAccountAnalytics] = useState<AccountAnalytics | null>(null);
+  const [accountError, setAccountError] = useState('');
 
-  const fetchOverview = async (pass: string) => {
+  const fetchOverview = async (pass: string, refreshAccounts = true) => {
     setLoading(true);
     setError('');
     try {
@@ -295,6 +311,15 @@ export default function AdminPage() {
       }
       const data = await response.json() as OverviewPayload;
       setPayload(data);
+      if (refreshAccounts) {
+        const accountsResponse = await fetch('/api/admin/users', { headers: { 'x-admin-password': pass }, cache: 'no-store' });
+        if (accountsResponse.ok) {
+          setAccountAnalytics(await accountsResponse.json() as AccountAnalytics);
+          setAccountError('');
+        } else {
+          setAccountError('读取用户列表失败');
+        }
+      }
       setAuthorized(true);
       setPassword(pass);
     } catch (e) {
@@ -307,10 +332,28 @@ export default function AdminPage() {
     }
   };
 
+  const toggleAccountStatus = async (account: AdminAccount) => {
+    const nextStatus = account.status === 'active' ? 'disabled' : 'active';
+    if (nextStatus === 'disabled' && !window.confirm(`确定停用账号 ${account.email} 吗？其当前登录会话将被撤销。`)) return;
+    try {
+      const response = await fetch('/api/admin/users', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'x-admin-password': password },
+        body: JSON.stringify({ id: account.id, status: nextStatus }),
+      });
+      if (!response.ok) throw new Error('更新账号状态失败');
+      const refreshed = await fetch('/api/admin/users', { headers: { 'x-admin-password': password }, cache: 'no-store' });
+      if (!refreshed.ok) throw new Error('刷新用户列表失败');
+      setAccountAnalytics(await refreshed.json() as AccountAnalytics);
+    } catch (statusError) {
+      setAccountError(statusError instanceof Error ? statusError.message : '更新账号状态失败');
+    }
+  };
+
   useEffect(() => {
     if (!authorized || !password) return;
     const timer = window.setInterval(() => {
-      fetchOverview(password);
+      fetchOverview(password, false);
     }, 12000);
     return () => window.clearInterval(timer);
   }, [authorized, password]);
@@ -388,6 +431,57 @@ export default function AdminPage() {
               </div>
             </div>
 
+            <section className="min-w-0 rounded-xl border border-gray-200 bg-white p-3 shadow-sm sm:p-5" aria-labelledby="accounts-title">
+              <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <h2 id="accounts-title" className="font-semibold text-gray-800">用户管理</h2>
+                  <p className="mt-1 text-xs text-gray-500">账号信息、登录情况及关联的生成/下载次数</p>
+                </div>
+                <div className="flex gap-3 text-xs text-gray-600 sm:text-sm">
+                  <span>总用户 {accountAnalytics?.total ?? 0}</span>
+                  <span>活跃 {accountAnalytics?.active ?? 0}</span>
+                  <span>今日新增 {accountAnalytics?.today ?? 0}</span>
+                </div>
+              </div>
+              {accountError && <p role="alert" className="mb-3 text-sm text-rose-600">{accountError}</p>}
+              <div className="overflow-x-auto">
+                <table className="min-w-[760px] w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-gray-200 text-left text-gray-500">
+                      <th className="px-2 py-2">邮箱</th>
+                      <th className="px-2 py-2">注册时间</th>
+                      <th className="px-2 py-2">最近登录</th>
+                      <th className="px-2 py-2">邮箱验证</th>
+                      <th className="px-2 py-2 text-right">生成</th>
+                      <th className="px-2 py-2 text-right">下载</th>
+                      <th className="px-2 py-2">账号状态</th>
+                      <th className="px-2 py-2">操作</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(accountAnalytics?.users || []).map((account) => (
+                      <tr key={account.id} className="border-b border-gray-100 text-gray-700">
+                        <td className="px-2 py-2">{account.email}</td>
+                        <td className="whitespace-nowrap px-2 py-2">{formatDateTime(account.createdAt)}</td>
+                        <td className="whitespace-nowrap px-2 py-2">{account.lastLoginAt ? formatDateTime(account.lastLoginAt) : '尚未登录'}</td>
+                        <td className="px-2 py-2"><span className={account.emailVerified ? 'text-emerald-600' : 'text-amber-600'}>{account.emailVerified ? '已验证' : '待验证'}</span></td>
+                        <td className="px-2 py-2 text-right tabular-nums">{Number(account.generations) || 0}</td>
+                        <td className="px-2 py-2 text-right tabular-nums">{Number(account.downloads) || 0}</td>
+                        <td className="px-2 py-2"><span className={account.status === 'active' ? 'text-emerald-600' : 'text-rose-600'}>{account.status === 'active' ? '正常' : '已停用'}</span></td>
+                        <td className="px-2 py-2">
+                          <button type="button" onClick={() => toggleAccountStatus(account)} className="text-indigo-600 hover:text-indigo-800">
+                            {account.status === 'active' ? '停用' : '启用'}
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                    {!accountAnalytics?.users.length && <tr><td colSpan={8} className="px-2 py-8 text-center text-gray-500">暂无注册用户</td></tr>}
+                  </tbody>
+                </table>
+              </div>
+              <p className="mt-3 text-xs text-gray-500">最多显示最近注册的 200 个账号；停用会撤销登录会话，但不会影响该访客匿名使用公共功能。</p>
+            </section>
+
             <div className="grid min-w-0 gap-6 lg:grid-cols-2 [&>*]:min-w-0">
               <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
                 <div className="mb-4 flex items-center gap-2 text-gray-800">
@@ -409,10 +503,11 @@ export default function AdminPage() {
                   <ShieldCheck className="h-5 w-5 text-indigo-600" />
                   <span className="font-semibold">核心服务状态</span>
                 </div>
-                <p className={`text-sm font-medium ${payload?.envStatus.deepseek ? 'text-emerald-700' : 'text-rose-700'}`}>
-                  {payload?.envStatus.deepseek ? 'AI 生成服务已就绪' : 'AI 生成服务配置异常'}
-                </p>
-                <p className="mt-1 text-xs text-gray-500">仅显示服务可用状态，不展示部署变量详情</p>
+                <div className="space-y-1 text-sm">
+                  <p className={payload?.envStatus.deepseek ? 'text-emerald-700' : 'text-rose-700'}>AI 生成：{payload?.envStatus.deepseek ? '已就绪' : '未配置'}</p>
+                  <p className={payload?.envStatus.smtp ? 'text-emerald-700' : 'text-amber-700'}>验证邮件：{payload?.envStatus.smtp ? '已配置' : '未配置 SMTP 密钥'}</p>
+                </div>
+                <p className="mt-1 text-xs text-gray-500">仅显示服务状态，不展示部署变量或密钥</p>
               </div>
             </div>
 

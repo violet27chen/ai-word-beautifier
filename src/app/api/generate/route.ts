@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { trackAdminEvent } from '@/lib/admin-metrics';
+import { getRequestAccount } from '@/lib/account-auth';
 
 export const maxDuration = 300; // Allow 5 mins for large models + vision
 
@@ -295,8 +296,10 @@ async function fetchLatestEvidenceFromMcp(query: string): Promise<EvidenceItem[]
 
 export async function POST(req: Request) {
   let isZh = false;
+  let accountId: string | undefined;
   const l = (zhText: string, enText: string) => (isZh ? zhText : enText);
   try {
+    accountId = (await getRequestAccount(req).catch(() => null))?.id;
     const deepseekApiKey = process.env.DEEPSEEK_API_KEY?.trim();
     if (!deepseekApiKey) {
       return NextResponse.json({ error: 'DEEPSEEK_API_KEY 未配置。' }, { status: 503 });
@@ -631,6 +634,7 @@ Available image IDs:\n`
       model: selectedModel,
       hasImages,
       promptLength: String(prompt || '').length + String(content || '').length,
+      userId: accountId,
     });
     return new NextResponse(stream, {
       headers: {
@@ -647,6 +651,7 @@ Available image IDs:\n`
       type: 'generate',
       status: 'error',
       errorMessage: err.message?.slice(0, 200) || l('生成失败', 'Request failed'),
+      userId: accountId,
     });
 
     let errorMsg = err.message || l('生成失败', 'Request failed');

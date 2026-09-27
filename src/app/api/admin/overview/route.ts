@@ -13,6 +13,7 @@ function validateAdmin(req: Request) {
 function buildEnvStatus() {
   return {
     deepseek: Boolean(process.env.DEEPSEEK_API_KEY?.trim()),
+    smtp: Boolean(process.env.SMTP_PASSWORD?.trim()),
     mcpSearch: Boolean(process.env.MCP_SEARCH_ENDPOINT?.trim()),
   };
 }

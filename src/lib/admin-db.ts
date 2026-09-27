@@ -10,6 +10,7 @@ export type AdminEventInput = {
   promptLength?: number;
   markdownLength?: number;
   errorMessage?: string;
+  userId?: string | null;
 };
 
 type AdminEventRow = {
@@ -118,6 +119,11 @@ async function ensureMySqlTables() {
       INDEX idx_type (type)
     )
   `);
+  try {
+    await db.query('ALTER TABLE admin_events ADD COLUMN user_id VARCHAR(64)');
+  } catch {
+    // Column already exists.
+  }
   await db.query(`
     CREATE TABLE IF NOT EXISTS admin_visits (
       id INT AUTO_INCREMENT PRIMARY KEY,
@@ -141,6 +147,11 @@ async function ensureD1Tables(db: D1Database) {
     d1Initialization = (async () => {
       for (const statement of D1_SCHEMA) {
         await db.prepare(statement).run();
+      }
+      try {
+        await db.prepare('ALTER TABLE admin_events ADD COLUMN user_id TEXT').run();
+      } catch {
+        // Column already exists.
       }
       await db.prepare('INSERT OR IGNORE INTO admin_meta(key, value) VALUES(?, ?)')
         .bind('startedAt', new Date().toISOString())
@@ -179,20 +190,21 @@ export async function insertAdminEvent(event: AdminEventInput) {
     Number.isFinite(event.promptLength) ? event.promptLength : null,
     Number.isFinite(event.markdownLength) ? event.markdownLength : null,
     event.errorMessage || null,
+    event.userId || null,
     createdAt,
   ];
 
   if (database.kind === 'd1') {
     await database.db.prepare(
-      `INSERT INTO admin_events(id, type, status, model, has_images, prompt_length, markdown_length, error_message, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      `INSERT INTO admin_events(id, type, status, model, has_images, prompt_length, markdown_length, error_message, user_id, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     ).bind(...values).run();
     return;
   }
 
   await database.db.query(
-    `INSERT INTO admin_events(id, type, status, model, has_images, prompt_length, markdown_length, error_message, created_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO admin_events(id, type, status, model, has_images, prompt_length, markdown_length, error_message, user_id, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     values
   );
 }

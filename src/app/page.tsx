@@ -5,6 +5,7 @@ import { Download, Loader2, FileText, Settings, Wand2, AlertCircle, Upload, Imag
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import Markdown from 'markdown-to-jsx';
+import Link from 'next/link';
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -77,6 +78,35 @@ const DIAGRAM_MODES = [
 
 let mammothPromise: Promise<typeof import('mammoth/mammoth.browser')> | null = null;
 const CHUNK_RELOAD_GUARD_KEY = '__chunk_reload_once__';
+
+function AccountControls({ locale }: { locale: 'zh' | 'en' }) {
+  const [email, setEmail] = useState('');
+
+  useEffect(() => {
+    fetch('/api/auth/me', { cache: 'no-store' })
+      .then((response) => response.ok ? response.json() as Promise<{ user: { email: string } | null }> : null)
+      .then((result) => setEmail(result?.user?.email || ''))
+      .catch(() => setEmail(''));
+  }, []);
+
+  async function logout() {
+    await fetch('/api/auth/logout', { method: 'POST' });
+    setEmail('');
+  }
+
+  return email ? (
+    <div className="flex items-center gap-2 text-xs sm:text-sm">
+      <span className="max-w-28 truncate text-gray-600 sm:max-w-48">{email}</span>
+      <button type="button" onClick={logout} className="rounded-md border border-gray-200 px-2 py-1.5 text-gray-600 hover:bg-gray-50">
+        {locale === 'zh' ? '退出' : 'Log out'}
+      </button>
+    </div>
+  ) : (
+    <Link href="/account" className="rounded-md border border-indigo-200 px-2.5 py-1.5 text-xs font-medium text-indigo-700 hover:bg-indigo-50 sm:px-3 sm:text-sm">
+      {locale === 'zh' ? '登录 / 注册' : 'Sign in'}
+    </Link>
+  );
+}
 
 type MermaidRenderer = {
   initialize: (config: Record<string, unknown>) => void;
@@ -1201,7 +1231,8 @@ export default function Home() {
             <Wand2 className="w-6 h-6" />
             <h1 className="text-xl font-bold text-gray-900">{text('appTitle')}</h1>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <AccountControls locale={locale} />
             <div className="hidden md:flex rounded-lg bg-gray-100 p-1">
               <button
                 type="button"
@@ -1764,9 +1795,9 @@ export default function Home() {
               {locale === 'zh' ? (
                 <>
                   <h4>1. 数据收集与流转</h4>
-                  <p>根据《中华人民共和国个人信息保护法》及《中华人民共和国数据安全法》的相关规定，本工具作为一个前端中间件平台，承诺**不在本地或云端数据库中保存、记录、或截留您上传的任何文本或图片内容**。您输入的所有排版要求、文本以及图片，将通过加密传输协议（HTTPS）发送至 DeepSeek API 进行实时推理与生成。</p>
+                  <p>注册账号时，我们会保存您的邮箱、密码派生摘要（不保存明文密码）、注册时间及最近登录时间，并使用 HttpOnly Cookie 和服务端会话记录维持登录状态。登录后发起的生成和下载请求会关联到账号，用于后台统计请求类型、结果、时间、输入长度、图片使用情况及错误摘要；本平台不保存您提交的正文、提示词或图片内容。我们还会记录由访问 IP 和浏览器标识组成的访问统计信息以估算 PV/UV，并对登录尝试进行限频。生成所需的输入会通过 HTTPS 发送至 DeepSeek API 进行实时处理。</p>
                   <h4>2. 上游数据安全与隐私边界</h4>
-                  <p>本平台不控制上游 AI 厂商的数据处理行为。您的数据会发送至 DeepSeek 进行实时推理，具体数据处理受其用户协议与隐私政策约束。本平台强烈建议您不要上传国家机密、商业机密或敏感个人隐私信息。</p>
+                  <p>本平台不控制上游 AI 厂商的数据处理行为。您的文档输入会发送至 DeepSeek 进行实时推理；邮箱验证和密码重置邮件会通过配置的邮件服务商发送。相关数据处理分别受其用户协议与隐私政策约束。本平台强烈建议您不要上传国家机密、商业机密或敏感个人隐私信息。</p>
                   <h4>3. 模型训练声明</h4>
                   <p>本平台自身**绝对不会**利用您上传的任何数据进行模型训练或微调。关于上游 AI 厂商是否会利用您的 API 请求数据进行模型迭代，请参阅其官方声明。一般情况下，API 接入商会承诺不对企业接口数据进行训练，但请以官方最新政策为准。</p>
                   <h4>4. 政策更新</h4>
@@ -1775,9 +1806,9 @@ export default function Home() {
               ) : (
                 <>
                   <h4>1. Data flow</h4>
-                  <p>This site does not store or retain your prompt, text, or images in a database for the purpose of providing the formatting service. Your inputs are transmitted over HTTPS to the selected model provider for real-time inference.</p>
+                  <p>When you register, we store your email address, a derived password hash (never the plaintext password), account timestamps, and a server-side session record; the browser session cookie is HttpOnly. Requests made while signed in are associated with your account for usage analytics (request type, result, time, input length, image usage, and error summary). We also record visitor IP/browser identifiers to estimate PV/UV and apply rate limits to sign-in attempts. We do not store the prompt, document text, or uploaded images in our database. Inputs are sent over HTTPS to DeepSeek for processing.</p>
                   <h4>2. Third-party processing</h4>
-                  <p>Your data is sent to DeepSeek for real-time inference. Please review the provider&apos;s terms and privacy policy for details.</p>
+                  <p>Document inputs are sent to DeepSeek for real-time inference. Email verification and password reset messages are sent through the configured email provider. Please review the respective providers&apos; terms and privacy policies.</p>
                   <h4>3. Model training</h4>
                   <p>This site does not use your inputs to train or fine-tune models. For third-party providers, refer to their official statements regarding data retention and training.</p>
                   <h4>4. Updates</h4>

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { marked } from 'marked';
 import HTMLtoDOCX from 'html-to-docx';
 import { trackAdminEvent } from '@/lib/admin-metrics';
+import { getRequestAccount } from '@/lib/account-auth';
 
 function trackEventSafely(event: Parameters<typeof trackAdminEvent>[0]) {
   return trackAdminEvent(event).catch((trackingError) => {
@@ -74,7 +75,9 @@ function injectInlineDocStyles(html: string) {
 }
 
 export async function POST(req: Request) {
+  let accountId: string | undefined;
   try {
+    accountId = (await getRequestAccount(req).catch(() => null))?.id;
     const { markdown, images: requestImages } = await req.json();
 
     if (typeof markdown !== 'string' || markdown.length > 300_000) {
@@ -131,6 +134,7 @@ export async function POST(req: Request) {
       status: 'success',
       markdownLength: String(markdownOutput || '').length,
       hasImages: hasImages || false,
+      userId: accountId,
     });
     return new NextResponse(fileBuffer, {
       headers: {
@@ -145,6 +149,7 @@ export async function POST(req: Request) {
       type: 'download',
       status: 'error',
       errorMessage: err.message?.slice(0, 200) || '下载失败',
+      userId: accountId,
     });
     return NextResponse.json({ error: err.message || '下载失败' }, { status: 500 });
   }
