@@ -78,6 +78,9 @@ export async function POST(req: Request) {
   let accountId: string | undefined;
   try {
     accountId = (await getRequestAccount(req).catch(() => null))?.id;
+    if (!accountId) {
+      return NextResponse.json({ code: 'AUTH_REQUIRED', error: '请先登录后下载文档。 / Please sign in to download documents.' }, { status: 401 });
+    }
     const { markdown, images: requestImages } = await req.json();
 
     if (typeof markdown !== 'string' || markdown.length > 300_000) {

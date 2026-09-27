@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
 import { Download, Loader2, FileText, Settings, Wand2, AlertCircle, Upload, ImagePlus, X, ChevronDown, ChevronUp, Maximize2, Minimize2, SlidersHorizontal, Copy, Check } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -14,6 +15,7 @@ function cn(...inputs: ClassValue[]) {
 type Locale = 'en' | 'zh';
 
 const LOCALE_STORAGE_KEY = '__app_locale__';
+const PENDING_GENERATION_DRAFT_KEY = '__pending_generation_draft__';
 
 function resolveInitialLocale(): Locale {
   if (typeof window === 'undefined') return 'en';
@@ -79,19 +81,10 @@ const DIAGRAM_MODES = [
 let mammothPromise: Promise<typeof import('mammoth/mammoth.browser')> | null = null;
 const CHUNK_RELOAD_GUARD_KEY = '__chunk_reload_once__';
 
-function AccountControls({ locale }: { locale: 'zh' | 'en' }) {
-  const [email, setEmail] = useState('');
-
-  useEffect(() => {
-    fetch('/api/auth/me', { cache: 'no-store' })
-      .then((response) => response.ok ? response.json() as Promise<{ user: { email: string } | null }> : null)
-      .then((result) => setEmail(result?.user?.email || ''))
-      .catch(() => setEmail(''));
-  }, []);
-
+function AccountControls({ locale, email, onLogout }: { locale: 'zh' | 'en'; email: string; onLogout: () => void }) {
   async function logout() {
     await fetch('/api/auth/logout', { method: 'POST' });
-    setEmail('');
+    onLogout();
   }
 
   return email ? (
@@ -209,7 +202,11 @@ function getMammoth() {
 }
 
 export default function Home() {
+  const router = useRouter();
+  const pathname = usePathname();
   const [locale, setLocale] = useState<Locale>('en');
+  const [accountEmail, setAccountEmail] = useState('');
+  const [accountStatusLoaded, setAccountStatusLoaded] = useState(false);
   const [prompt, setPrompt] = useState('');
   const [content, setContent] = useState('');
   const model = MODEL;
@@ -221,6 +218,7 @@ export default function Home() {
 
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [requiresLogin, setRequiresLogin] = useState(false);
   const [success, setSuccess] = useState(false);
   const [displayedMarkdown, setDisplayedMarkdown] = useState('');
   const [isDownloading, setIsDownloading] = useState(false);
@@ -232,6 +230,17 @@ export default function Home() {
   useEffect(() => {
     setLocale(resolveInitialLocale());
   }, []);
+
+  useEffect(() => {
+    let active = true;
+    setAccountStatusLoaded(false);
+    fetch('/api/auth/me', { cache: 'no-store' })
+      .then((response) => response.ok ? response.json() as Promise<{ user: { email: string } | null }> : null)
+      .then((result) => { if (active) setAccountEmail(result?.user?.email || ''); })
+      .catch(() => { if (active) setAccountEmail(''); })
+      .finally(() => { if (active) setAccountStatusLoaded(true); });
+    return () => { active = false; };
+  }, [pathname]);
 
   const copyText = async (value: string) => {
     if (typeof window === 'undefined') return false;
@@ -624,6 +633,40 @@ export default function Home() {
 
   const [uploadedImages, setUploadedImages] = useState<{id: string, base64: string, file: File}[]>([]);
 
+  useEffect(() => {
+    if (pathname !== '/') return;
+    try {
+      const savedDraft = window.sessionStorage.getItem(PENDING_GENERATION_DRAFT_KEY);
+      if (!savedDraft) return;
+      const draft = JSON.parse(savedDraft) as {
+        prompt?: unknown; content?: unknown; locale?: unknown; wordCount?: unknown; writingStyle?: unknown;
+        eduLevel?: unknown; perfLevel?: unknown; addTypos?: unknown; humanTrace?: unknown;
+        enableEvidenceSupport?: unknown; diagramMode?: unknown; enableSignatureDate?: unknown;
+        authorName?: unknown; documentDate?: unknown; refinePrompt?: unknown; hadImages?: unknown;
+      };
+      if (typeof draft.prompt === 'string') setPrompt(draft.prompt);
+      if (typeof draft.content === 'string') setContent(draft.content);
+      if (draft.locale === 'zh' || draft.locale === 'en') setLocale(draft.locale);
+      if (typeof draft.wordCount === 'string') setWordCount(draft.wordCount);
+      if (typeof draft.writingStyle === 'string') setWritingStyle(draft.writingStyle);
+      if (typeof draft.eduLevel === 'string') setEduLevel(draft.eduLevel);
+      if (draft.perfLevel === '优秀' || draft.perfLevel === '中等' || draft.perfLevel === '差劲') setPerfLevel(draft.perfLevel);
+      if (typeof draft.addTypos === 'boolean') setAddTypos(draft.addTypos);
+      if (typeof draft.humanTrace === 'boolean') setHumanTrace(draft.humanTrace);
+      if (typeof draft.enableEvidenceSupport === 'boolean') setEnableEvidenceSupport(draft.enableEvidenceSupport);
+      if (draft.diagramMode === 'none' || draft.diagramMode === 'mindmap' || draft.diagramMode === 'flowchart') setDiagramMode(draft.diagramMode);
+      if (typeof draft.enableSignatureDate === 'boolean') setEnableSignatureDate(draft.enableSignatureDate);
+      if (typeof draft.authorName === 'string') setAuthorName(draft.authorName);
+      if (typeof draft.documentDate === 'string') setDocumentDate(draft.documentDate);
+      if (typeof draft.refinePrompt === 'string') setRefinePrompt(draft.refinePrompt);
+      if (draft.hadImages) setError(draft.locale === 'zh' ? '生成要求和设置已恢复；为保护图片隐私，请登录后重新添加图片。' : 'Your request and settings were restored. Please re-add images after signing in.');
+      window.sessionStorage.removeItem(PENDING_GENERATION_DRAFT_KEY);
+    } catch (restoreError) {
+      console.error('Unable to restore pending generation draft:', restoreError);
+      window.sessionStorage.removeItem(PENDING_GENERATION_DRAFT_KEY);
+    }
+  }, [pathname]);
+
   const readFileAsDataUrl = (file: File) =>
     new Promise<string>((resolve, reject) => {
       const reader = new FileReader();
@@ -631,6 +674,20 @@ export default function Home() {
       reader.onerror = () => reject(new Error('图片读取失败'));
       reader.readAsDataURL(file);
     });
+
+  const savePendingGenerationDraft = (refinementInstruction = refinePrompt) => {
+    try {
+      window.sessionStorage.setItem(PENDING_GENERATION_DRAFT_KEY, JSON.stringify({
+        prompt, content, locale, wordCount, writingStyle, eduLevel, perfLevel, addTypos, humanTrace,
+        enableEvidenceSupport, diagramMode, enableSignatureDate, authorName, documentDate, refinePrompt: refinementInstruction,
+        hadImages: uploadedImages.length > 0,
+      }));
+      return true;
+    } catch (saveError) {
+      console.error('Unable to save pending generation draft:', saveError);
+      return false;
+    }
+  };
 
   const convertGifToPngDataUrl = (file: File) =>
     new Promise<string>((resolve, reject) => {
@@ -761,6 +818,7 @@ export default function Home() {
   const executeGenerate = async (payload: Record<string, unknown>, initialMsg: string, typingMsg: string) => {
     setIsFetching(true);
     setError(null);
+    setRequiresLogin(false);
     setSuccess(false);
     setAutoScroll(true);
     fullTextRef.current = '';
@@ -777,7 +835,13 @@ export default function Home() {
       });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
+        const errorData = await response.json().catch(() => ({})) as { error?: string; code?: string };
+        if (errorData.code === 'AUTH_REQUIRED') {
+          setRequiresLogin(true);
+          if (savePendingGenerationDraft()) router.push('/account?returnTo=%2F');
+          else setError(locale === 'zh' ? '无法暂存当前内容，请复制保存后再登录。' : 'Unable to save your draft. Please copy it before signing in.');
+          throw new Error('AUTH_REQUIRED');
+        }
         throw new Error(errorData.error || (locale === 'zh' ? '生成失败，请检查网络或重试' : 'Request failed. Please try again.'));
       }
 
@@ -810,7 +874,9 @@ export default function Home() {
       const e = err as Error;
 
       // Friendly error messages mapping
-      let errorMsg = e.message || text('errorUnknown');
+      let errorMsg = e.message === 'AUTH_REQUIRED'
+        ? (locale === 'zh' ? '请先登录账号，再使用文档生成服务。' : 'Please sign in before using document generation.')
+        : e.message || text('errorUnknown');
       if (errorMsg.includes('Failed to fetch') || errorMsg.includes('NetworkError')) {
         errorMsg = text('errorNetwork');
       } else if (errorMsg.includes('timeout') || errorMsg.includes('Timeout')) {
@@ -838,6 +904,16 @@ export default function Home() {
     // Original formatter mode
     if (!prompt.trim()) {
       setError(text('errorNeedPrompt'));
+      return;
+    }
+
+    if (!accountStatusLoaded) return;
+    if (!accountEmail) {
+      if (!savePendingGenerationDraft()) {
+        setError(locale === 'zh' ? '无法暂存当前内容，请复制保存后再登录。' : 'Unable to save your draft. Please copy it before signing in.');
+        return;
+      }
+      router.push('/account?returnTo=%2F');
       return;
     }
 
@@ -870,6 +946,15 @@ export default function Home() {
   const handleRefine = async (customPrompt?: string) => {
     const instruction = customPrompt || refinePrompt;
     if (!instruction.trim()) return;
+    if (!accountStatusLoaded) return;
+    if (!accountEmail) {
+      if (!savePendingGenerationDraft(instruction)) {
+        setError(locale === 'zh' ? '无法暂存当前内容，请复制保存后再登录。' : 'Unable to save your draft. Please copy it before signing in.');
+        return;
+      }
+      router.push('/account?returnTo=%2F');
+      return;
+    }
 
     const payload = {
       prompt: locale === 'zh'
@@ -1122,6 +1207,7 @@ export default function Home() {
     if (!cleanMarkdown) return;
     setIsDownloading(true);
     setError(null);
+    setRequiresLogin(false);
 
     try {
       {
@@ -1139,6 +1225,13 @@ export default function Home() {
         });
 
         if (!response.ok) {
+          if (response.status === 401) {
+            const errorData = await response.json().catch(() => ({})) as { code?: string };
+            if (errorData.code === 'AUTH_REQUIRED') {
+              setRequiresLogin(true);
+              throw new Error('AUTH_REQUIRED');
+            }
+          }
           throw new Error(text('errorDownload'));
         }
 
@@ -1161,7 +1254,9 @@ export default function Home() {
       console.error('Download Error:', err);
       const e = err as Error;
 
-      let errorMsg = e.message || '下载发生未知错误';
+      let errorMsg = e.message === 'AUTH_REQUIRED'
+        ? (locale === 'zh' ? '请先登录账号，再下载文档。' : 'Please sign in before downloading documents.')
+        : e.message || '下载发生未知错误';
       if (errorMsg.includes('Failed to fetch') || errorMsg.includes('NetworkError')) {
         errorMsg = '下载中断，请检查您的网络连接并重试。';
       }
@@ -1232,7 +1327,7 @@ export default function Home() {
             <h1 className="text-xl font-bold text-gray-900">{text('appTitle')}</h1>
           </div>
           <div className="flex items-center gap-2 sm:gap-3">
-            <AccountControls locale={locale} />
+            <AccountControls locale={locale} email={accountEmail} onLogout={() => setAccountEmail('')} />
             <div className="hidden md:flex rounded-lg bg-gray-100 p-1">
               <button
                 type="button"
@@ -1570,10 +1665,10 @@ export default function Home() {
 
               <button
                 onClick={handleGenerate}
-                disabled={isFetching || isTyping}
+                disabled={isFetching || isTyping || !accountStatusLoaded}
                 className={cn(
                   "w-full flex items-center justify-center gap-2 py-3 px-4 rounded-lg font-medium text-white transition-all shadow-sm shrink-0",
-                  (isFetching || isTyping)
+                  (isFetching || isTyping || !accountStatusLoaded)
                     ? "bg-indigo-400 cursor-not-allowed"
                     : "bg-indigo-600 hover:bg-indigo-700 hover:shadow"
                 )}
@@ -1586,7 +1681,9 @@ export default function Home() {
                 ) : (
                   <>
                     <Wand2 className="w-5 h-5" />
-                    {locale === 'zh' ? '开始排版并生成' : 'Generate & Format'}
+                    {accountEmail
+                      ? (locale === 'zh' ? '开始排版并生成' : 'Generate & Format')
+                      : (locale === 'zh' ? '登录并开始排版生成' : 'Sign in to generate')}
                   </>
                 )}
               </button>
@@ -1690,7 +1787,10 @@ export default function Home() {
                 {error && (
                   <div className="p-4 bg-red-50 border border-red-100 rounded-lg flex items-start gap-3 text-red-700">
                     <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
-                    <p className="text-sm">{error}</p>
+                    <div className="text-sm">
+                      <p>{error}</p>
+                      {requiresLogin && <Link href="/account?returnTo=%2F" className="mt-2 inline-block font-medium text-indigo-700 underline underline-offset-2">{locale === 'zh' ? '登录或注册' : 'Sign in or create an account'}</Link>}
+                    </div>
                   </div>
                 )}
 
@@ -1704,6 +1804,7 @@ export default function Home() {
                 <div className="pt-6 border-t border-gray-100 pb-4">
                   <h3 className="text-sm font-medium text-gray-900 mb-2">{locale === 'zh' ? '使用说明与免责声明' : 'Usage & Disclaimer'}</h3>
                   <ul className="text-sm text-gray-600 space-y-2 list-disc list-inside pl-1 mb-4">
+                    <li>{locale === 'zh' ? '生成和下载需先登录账号。' : 'Sign in is required to generate and download documents.'}</li>
                     <li><strong>{locale === 'zh' ? '直接生成：' : 'Generate:'}</strong> {locale === 'zh' ? '输入要求并点击生成，即可获得结构清晰、可下载的 Word 文档。' : 'Enter instructions and click Generate to get a well-structured draft and a downloadable .docx.'}</li>
                     <li><strong>{locale === 'zh' ? '排版美化：' : 'Beautify:'}</strong> {locale === 'zh' ? '粘贴已有内容或上传 .docx，并在要求中说明目标风格与结构。' : 'Paste existing content or upload a .docx, then describe the desired style and structure.'}</li>
                     <li>{locale === 'zh' ? '生成速度取决于内容长度与所选模型，请耐心等待。' : 'Generation speed depends on content length and the selected model. Please wait.'}</li>

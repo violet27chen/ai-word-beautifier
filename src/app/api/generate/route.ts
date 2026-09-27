@@ -300,6 +300,9 @@ export async function POST(req: Request) {
   const l = (zhText: string, enText: string) => (isZh ? zhText : enText);
   try {
     accountId = (await getRequestAccount(req).catch(() => null))?.id;
+    if (!accountId) {
+      return NextResponse.json({ code: 'AUTH_REQUIRED', error: '请先登录后使用生成服务。 / Please sign in to generate documents.' }, { status: 401 });
+    }
     const deepseekApiKey = process.env.DEEPSEEK_API_KEY?.trim();
     if (!deepseekApiKey) {
       return NextResponse.json({ error: 'DEEPSEEK_API_KEY 未配置。' }, { status: 503 });

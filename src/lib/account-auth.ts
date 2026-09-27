@@ -11,6 +11,8 @@ import { sendTransactionalEmail } from '@/lib/smtp-mailer';
 
 export const ACCOUNT_SESSION_COOKIE = 'ai_word_session';
 export const ACCOUNT_SESSION_SECONDS = 60 * 60 * 24 * 30;
+// Cloudflare Workers rejects PBKDF2 iteration counts above 100,000.
+const PASSWORD_HASH_ITERATIONS = 100_000;
 
 function toHex(bytes: Uint8Array) {
   return Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
@@ -28,10 +30,15 @@ export function validEmail(email: string) {
   return email.length <= 254 && /^[a-z0-9.!#$%&'*+/=?^_`{|}~-]+@(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/i.test(email);
 }
 
+export function validPassword(password: string) {
+  const characterTypes = [/[a-z]/.test(password), /[A-Z]/.test(password), /[0-9]/.test(password), /[^A-Za-z0-9\s]/.test(password)];
+  return Array.from(password).length >= 8 && Array.from(password).length <= 128 && characterTypes.filter(Boolean).length >= 3;
+}
+
 export async function hashPassword(password: string, saltHex?: string) {
   const salt = saltHex ? fromHex(saltHex) : crypto.getRandomValues(new Uint8Array(16));
   const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(password), 'PBKDF2', false, ['deriveBits']);
-  const bits = await crypto.subtle.deriveBits({ name: 'PBKDF2', hash: 'SHA-256', salt, iterations: 120_000 }, key, 256);
+  const bits = await crypto.subtle.deriveBits({ name: 'PBKDF2', hash: 'SHA-256', salt, iterations: PASSWORD_HASH_ITERATIONS }, key, 256);
   return { salt: toHex(salt), hash: toHex(new Uint8Array(bits)) };
 }
 

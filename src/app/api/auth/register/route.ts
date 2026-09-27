@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { allowAuthAttempt, hashPassword, normalizeEmail, requestHasValidOrigin, sendAccountActionEmail, validEmail } from '@/lib/account-auth';
+import { allowAuthAttempt, hashPassword, normalizeEmail, requestHasValidOrigin, sendAccountActionEmail, validEmail, validPassword } from '@/lib/account-auth';
 import { createAccount } from '@/lib/user-db';
 
 export async function POST(request: Request) {
@@ -10,7 +10,7 @@ export async function POST(request: Request) {
     const email = normalizeEmail(body.email);
     const password = typeof body.password === 'string' ? body.password : '';
     if (!validEmail(email)) return NextResponse.json({ error: '请输入有效的邮箱地址。' }, { status: 400 });
-    if (password.length < 10 || password.length > 128) return NextResponse.json({ error: '密码长度需为 10–128 个字符。' }, { status: 400 });
+    if (!validPassword(password)) return NextResponse.json({ error: '密码至少需要 8 个字符，并且大写字母、小写字母、数字、特殊字符中至少包含 3 种。' }, { status: 400 });
     const secret = await hashPassword(password);
     const user = await createAccount({ email, passwordHash: secret.hash, passwordSalt: secret.salt });
     try {
