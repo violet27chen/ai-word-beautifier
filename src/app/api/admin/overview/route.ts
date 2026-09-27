@@ -29,7 +29,9 @@ export async function GET(req: Request) {
       overview: await getAdminOverview(),
     });
   } catch (error) {
-    console.error('Admin overview query failed:', error);
+    console.error('Admin overview query failed:', error instanceof Error
+      ? { name: error.name, message: error.message, stack: error.stack }
+      : { message: String(error) });
     return NextResponse.json({ error: '读取管理统计失败' }, { status: 500 });
   }
 }
