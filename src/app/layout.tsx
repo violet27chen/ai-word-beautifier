@@ -18,8 +18,8 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'DocPolish',
-  description: 'Turn messy drafts into polished Word docs. Generate, rewrite, and export to .docx.',
+  title: 'AI Word 排版美化助手',
+  description: 'AI Word document formatting and writing assistant.',
   icons: {
     icon: '/file.svg',
   },

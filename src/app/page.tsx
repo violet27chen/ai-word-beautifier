@@ -75,9 +75,6 @@ const DIAGRAM_MODES = [
   { value: 'flowchart', label: '自动流程图' },
 ];
 
-/* const USDT_DONATION_NETWORK = process.env.NEXT_PUBLIC_USDT_DONATION_NETWORK?.trim() || '';
-const USDT_DONATION_ADDRESS = process.env.NEXT_PUBLIC_USDT_DONATION_ADDRESS?.trim() || ''; */
-
 let mammothPromise: Promise<typeof import('mammoth/mammoth.browser')> | null = null;
 const CHUNK_RELOAD_GUARD_KEY = '__chunk_reload_once__';
 
@@ -200,10 +197,7 @@ export default function Home() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isPrivacyModalOpen, setIsPrivacyModalOpen] = useState(false);
   const [isAgreementModalOpen, setIsAgreementModalOpen] = useState(false);
-  // const [isDonateModalOpen, setIsDonateModalOpen] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
-  // const [isUsdtCopied, setIsUsdtCopied] = useState(false);
-  // const hasUsdtDonationInfo = Boolean(USDT_DONATION_NETWORK && USDT_DONATION_ADDRESS);
 
   useEffect(() => {
     setLocale(resolveInitialLocale());
@@ -248,16 +242,6 @@ export default function Home() {
     }
   };
 
-  /* const handleCopyUsdtAddress = async () => {
-    if (!USDT_DONATION_ADDRESS) return;
-    try {
-      await navigator.clipboard.writeText(USDT_DONATION_ADDRESS);
-      setIsUsdtCopied(true);
-      setTimeout(() => setIsUsdtCopied(false), 2000);
-    } catch (err) {
-      console.error('Failed to copy USDT address:', err);
-    }
-  }; */
   const resultRef = useRef<HTMLDivElement>(null);
   const modalResultRef = useRef<HTMLDivElement>(null);
   const [autoScroll, setAutoScroll] = useState(true);
@@ -291,7 +275,7 @@ export default function Home() {
       diffToggleShow: 'Show comparison',
       diffToggleHide: 'Hide',
       diffLeftTitle: 'Typical AI output',
-      diffRightTitle: 'DocPolish output',
+      diffRightTitle: 'AI Word output',
       diffLeftP1: 'Plain text / Markdown that still needs manual formatting.',
       diffRightP1: 'Structured, polished content that exports to .docx.',
       diffLeftB1: 'Hard to copy into Word cleanly',
@@ -364,7 +348,7 @@ export default function Home() {
       diffToggleShow: '查看对比',
       diffToggleHide: '收起',
       diffLeftTitle: '传统 AI 输出',
-      diffRightTitle: 'DocPolish 输出',
+      diffRightTitle: 'AI Word 输出',
       diffLeftP1: '多为纯文本/Markdown，需要你手动排版成 Word。',
       diffRightP1: '自动结构化排版，一键导出 .docx 并可直接分享。',
       diffLeftB1: '复制到 Word 容易乱格式',
@@ -1763,77 +1747,6 @@ export default function Home() {
         </div>
       </footer>
 
-      {/* Donate Modal
-      {isDonateModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-md flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-            <div className="flex items-center justify-between p-4 border-b border-gray-100">
-              <h3 className="font-semibold text-gray-800 text-lg flex items-center gap-2">
-                <Heart className="w-5 h-5 text-red-500 fill-current" />
-                支持与捐助
-              </h3>
-              <button
-                onClick={() => setIsDonateModalOpen(false)}
-                className="p-2 bg-gray-100 hover:bg-gray-200 rounded-full text-gray-600 transition-colors"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-            <div className="p-6 text-center">
-              <p className="text-sm text-gray-600 mb-6 leading-relaxed">
-                感谢您的支持！所有捐助资金将用于购买 DeepSeek Token 额度，以及维持本站服务器的稳定运转。
-              </p>
-              <div className="flex flex-col items-center gap-4">
-                <div className="flex justify-center gap-6 w-full">
-                  <div className="flex flex-col items-center gap-2">
-                    <img src="/wechatpay.jpg" alt="微信赞赏码" className="w-36 h-36 rounded-xl object-contain border border-gray-200 shadow-sm" />
-                    <span className="text-xs text-gray-500 font-medium">微信赞赏</span>
-                  </div>
-                  <div className="flex flex-col items-center gap-2">
-                    <img src="/alipay.jpg" alt="支付宝收款码" className="w-36 h-36 rounded-xl object-contain border border-gray-200 shadow-sm" />
-                    <span className="text-xs text-gray-500 font-medium">支付宝收款</span>
-                  </div>
-                </div>
-                {hasUsdtDonationInfo ? (
-                  <div className="w-full rounded-lg border border-indigo-100 bg-indigo-50 px-4 py-3 text-left space-y-2">
-                    <p className="text-xs text-indigo-700 leading-relaxed">
-                      USDT 捐助信息如下，请务必核对网络与地址，建议先小额测试后再正式转账。
-                    </p>
-                    <div className="text-xs text-indigo-800">
-                      网络：<span className="font-semibold">{USDT_DONATION_NETWORK}</span>
-                    </div>
-                    <div className="text-xs text-indigo-800 break-all">
-                      地址：<span className="font-mono">{USDT_DONATION_ADDRESS}</span>
-                    </div>
-                    <button
-                      onClick={handleCopyUsdtAddress}
-                      className="inline-flex items-center gap-1 rounded-md bg-indigo-600 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-indigo-700 transition-colors"
-                    >
-                      {isUsdtCopied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-                      {isUsdtCopied ? '地址已复制' : '复制地址'}
-                    </button>
-                  </div>
-                ) : (
-                  <div className="w-full rounded-lg border border-indigo-100 bg-indigo-50 px-4 py-3 text-left">
-                    <p className="text-xs text-indigo-700 leading-relaxed">
-                      USDT 捐助通道准备中：你可以先联系我获取最新地址与网络信息。
-                    </p>
-                  </div>
-                )}
-              </div>
-            </div>
-            <div className="p-4 border-t border-gray-100 bg-gray-50 flex justify-center">
-              <button
-                onClick={() => setIsDonateModalOpen(false)}
-                className="w-full py-2 px-6 rounded-lg font-medium bg-gray-200 text-gray-700 hover:bg-gray-300 transition-all"
-              >
-                关闭
-              </button>
-            </div>
-          </div>
-        </div>
-      )} */}
-
       {/* Privacy Policy Modal */}
       {isPrivacyModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
@@ -1851,7 +1764,7 @@ export default function Home() {
               {locale === 'zh' ? (
                 <>
                   <h4>1. 数据收集与流转</h4>
-                  <p>根据《中华人民共和国个人信息保护法》及《中华人民共和国数据安全法》的相关规定，本工具作为一个前端中间件平台，承诺**不在本地或云端数据库中保存、记录、或截留您上传的任何文本或图片内容**。您输入的所有排版要求、文本以及图片，将通过加密传输协议（HTTPS）直接发送至上游的 AI 服务提供商（如智谱 AI、月之暗面等）的 API 接口进行实时推理与生成。</p>
+                  <p>根据《中华人民共和国个人信息保护法》及《中华人民共和国数据安全法》的相关规定，本工具作为一个前端中间件平台，承诺**不在本地或云端数据库中保存、记录、或截留您上传的任何文本或图片内容**。您输入的所有排版要求、文本以及图片，将通过加密传输协议（HTTPS）发送至 DeepSeek API 进行实时推理与生成。</p>
                   <h4>2. 上游数据安全与隐私边界</h4>
                   <p>本平台不控制上游 AI 厂商的数据处理行为。您的数据会发送至 DeepSeek 进行实时推理，具体数据处理受其用户协议与隐私政策约束。本平台强烈建议您不要上传国家机密、商业机密或敏感个人隐私信息。</p>
                   <h4>3. 模型训练声明</h4>

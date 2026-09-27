@@ -1,6 +1,6 @@
 # AI Word 排版美化助手
 
-这是一个基于 Next.js 的 Web 应用，面向两类核心场景：将已有内容快速排版美化为规范的 Word 文档，以及根据需求直接生成结构清晰、格式专业的 Word 文档。后端通过 OpenAI SDK 的兼容接口接入多家模型服务商，并支持可选的资料检索增强与图示生成。
+这是一个基于 Next.js 的 Web 应用，面向两类核心场景：将已有内容快速排版美化为规范的 Word 文档，以及根据需求直接生成结构清晰、格式专业的 Word 文档。后端通过 OpenAI 兼容接口调用 DeepSeek，并支持可选的资料检索增强与图示生成。
 
 ## 语言
 
@@ -28,7 +28,7 @@
 - 框架：Next.js (App Router) + React
 - 样式：Tailwind CSS
 - 图标：Lucide React
-- AI 接口：OpenAI SDK（多服务商兼容 BaseURL）
+- AI 接口：OpenAI SDK（DeepSeek 兼容 API）
 - 文本处理：Mammoth.js（Word 读取）、Marked / markdown-to-jsx（Markdown 处理与渲染）、html-to-docx + docx（生成 Word 文档）
 - 图示：Mermaid（可选）
 
@@ -94,9 +94,8 @@
 
 用途：管理后台数据聚合接口，返回运行状态、环境变量配置状态与最近事件记录。
 
-鉴权方式（二选一）：
+鉴权方式：
 - 请求头：`x-admin-password: <password>`
-- 查询参数：`?password=<password>`
 
 响应：
 - `200`：JSON（包含 `envStatus`、接口统计、访问统计、最近事件等）
@@ -136,7 +135,7 @@ curl -N -X POST "http://localhost:3000/api/generate" \
   -d '{
     "prompt": "写一份项目周报，包含本周完成事项、问题与下周计划",
     "content": "",
-    "model": "glm-4.7",
+    "model": "deepseek-flash",
     "images": [],
     "enableEvidenceSupport": false,
     "diagramMode": "none",
@@ -213,7 +212,7 @@ MYSQL_DATABASE=ai_word
    npx wrangler d1 create ai-word-admin
    ```
 
-2. 将命令返回的数据库 ID 填入 `wrangler.jsonc` 的 `ADMIN_DB` 绑定，保持绑定名为 `ADMIN_DB`。
+2. 将命令返回的数据库 ID 填入 `wrangler.jsonc` 的 `ADMIN_DB` 绑定，保持绑定名为 `ADMIN_DB`。当前仓库已配置数据库 `ai-word-admin`。
 3. 在 Cloudflare Worker 的运行时变量/密钥中配置 `ADMIN_PASSWORD`、`DEEPSEEK_API_KEY` 等环境变量。不要把密钥写入 `wrangler.jsonc`。
 4. 使用现有 Workers Builds 配置部署。构建命令为 `npm run build`，部署命令为 `npx wrangler deploy`。
 
@@ -232,12 +231,14 @@ MYSQL_DATABASE=ai_word
    ```
 4. 浏览器访问 `http://localhost:3000` 即可预览。
 
-## 生产构建与启动
+## 本地生产构建与启动
 
 ```bash
-npm run build
+npm run build:next
 npm run start
 ```
+
+Cloudflare Worker 请按上一节的 Workers Builds 配置部署，不要使用 `npm run start`。
 
 ## 部署建议
 

@@ -8,11 +8,10 @@
   "scripts": {
     "dev": "next dev",
     "build": "opennextjs-cloudflare build",
-    "build:cloudflare": "opennextjs-cloudflare build",
     "build:next": "next build --webpack",
     "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
     "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
-    "start": "next start -p ${PORT:-3000}",
+    "start": "next start",
     "lint": "eslint"
   },
   "dependencies": {

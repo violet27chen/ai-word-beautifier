@@ -1,6 +1,9 @@
 node_modules/
 .next/
 .open-next/
+.wrangler/
+.codeartsdoer/
+.workbuddy/
 out/
 dist/
 .vercel/
@@ -10,6 +13,7 @@ dist/
 .DS_Store
 .env.deploy
 worker-configuration.d.ts
+*.tsbuildinfo
 
-# SQLite (replaced by MySQL)
+# Local database files
 .data/
