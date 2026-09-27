@@ -24,6 +24,21 @@ export async function trackAdminVisit(input: { visitorKey: string; dateKey?: str
 
 export async function getAdminOverview() {
   const aggregates = await getAdminAggregates();
+  const trafficByDate = new Map(aggregates.last7Days.map((item) => [item.date, item]));
+  const requestsByDate = new Map(aggregates.last7RequestDays.map((item) => [item.date, item]));
+  const last7DateKeys = Array.from({ length: 7 }, (_, index) =>
+    new Date(Date.now() - (6 - index) * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
+  );
+  const last7Days = last7DateKeys.map((date) => ({
+    date,
+    visits: trafficByDate.get(date)?.visits || 0,
+    uniqueVisitors: trafficByDate.get(date)?.uniqueVisitors || 0,
+  }));
+  const last7RequestDays = last7DateKeys.map((date) => ({
+    date,
+    generate: requestsByDate.get(date)?.generate || 0,
+    download: requestsByDate.get(date)?.download || 0,
+  }));
   const totalRequests = aggregates.generateTotal + aggregates.downloadTotal;
   const recentEvents = (await getRecentAdminEvents(80)).map((item) => ({
     ...item,
@@ -49,8 +64,9 @@ export async function getAdminOverview() {
       uniqueVisitors: aggregates.uniqueVisitors,
       todayVisits: aggregates.todayVisits,
       todayUniqueVisitors: aggregates.todayUniqueVisitors,
-      last7Days: aggregates.last7Days,
+      last7Days,
     },
+    requestsByDay: last7RequestDays,
     recentEvents,
   };
 }

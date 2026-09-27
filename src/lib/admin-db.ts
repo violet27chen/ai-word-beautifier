@@ -233,6 +233,7 @@ export async function getAdminAggregates() {
   const todayKey = new Date().toISOString().slice(0, 10);
 
   if (database.kind === 'd1') {
+    const firstDayKey = new Date(Date.now() - 6 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
     const eventAgg = await database.db.prepare(`
       SELECT
         SUM(CASE WHEN type = 'generate' THEN 1 ELSE 0 END) AS generate_total,
@@ -254,6 +255,19 @@ export async function getAdminAggregates() {
       ORDER BY date_key DESC
       LIMIT 7
     `).all<{ date: string; visits: number; unique_visitors: number }>();
+    const last7Requests = await database.db.prepare(`
+      SELECT substr(created_at, 1, 10) AS date,
+        SUM(CASE WHEN type = 'generate' THEN 1 ELSE 0 END) AS generate_total,
+        SUM(CASE WHEN type = 'download' THEN 1 ELSE 0 END) AS download_total
+      FROM admin_events
+      WHERE substr(created_at, 1, 10) >= ? AND substr(created_at, 1, 10) <= ?
+      GROUP BY substr(created_at, 1, 10)
+      ORDER BY date
+    `).bind(firstDayKey, todayKey).all<{
+      date: string;
+      generate_total: number;
+      download_total: number;
+    }>();
 
     return {
       generateTotal: Number(eventAgg.generate_total) || 0,
@@ -271,9 +285,15 @@ export async function getAdminAggregates() {
         visits: Number(item.visits),
         uniqueVisitors: Number(item.unique_visitors),
       })),
+      last7RequestDays: (last7Requests.results || []).map((item) => ({
+        date: item.date,
+        generate: Number(item.generate_total) || 0,
+        download: Number(item.download_total) || 0,
+      })),
     };
   }
 
+  const firstDayKey = new Date(Date.now() - 6 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
   const [eventRows] = await database.db.query(`
     SELECT
       SUM(CASE WHEN type = 'generate' THEN 1 ELSE 0 END) AS generate_total,
@@ -296,6 +316,15 @@ export async function getAdminAggregates() {
     ORDER BY date_key DESC
     LIMIT 7
   `) as [mysql.RowDataPacket[], unknown];
+  const [last7RequestRows] = await database.db.query(`
+    SELECT LEFT(created_at, 10) AS day_key,
+      SUM(CASE WHEN type = 'generate' THEN 1 ELSE 0 END) AS generate_total,
+      SUM(CASE WHEN type = 'download' THEN 1 ELSE 0 END) AS download_total
+    FROM admin_events
+    WHERE LEFT(created_at, 10) >= ? AND LEFT(created_at, 10) <= ?
+    GROUP BY LEFT(created_at, 10)
+    ORDER BY day_key
+  `, [firstDayKey, todayKey]) as [mysql.RowDataPacket[], unknown];
 
   return {
     generateTotal: Number(eventAgg.generate_total) || 0,
@@ -312,6 +341,11 @@ export async function getAdminAggregates() {
       date: item.date,
       visits: Number(item.visits),
       uniqueVisitors: Number(item.unique_visitors),
+    })),
+    last7RequestDays: (last7RequestRows as Array<{ day_key: string; generate_total: number; download_total: number }>).map((item) => ({
+      date: item.day_key,
+      generate: Number(item.generate_total) || 0,
+      download: Number(item.download_total) || 0,
     })),
   };
 }
