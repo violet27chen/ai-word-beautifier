@@ -335,7 +335,7 @@ export async function POST(req: Request) {
     const client = new OpenAI({ apiKey: deepseekApiKey, baseURL: 'https://api.deepseek.com' });
     const selectedModel = DEEPSEEK_MODEL;
 
-    const selectedDiagramMode = diagramMode === 'mindmap' || diagramMode === 'flowchart' ? diagramMode : 'none';
+    const selectedDiagramMode = diagramMode === 'auto' || diagramMode === 'mindmap' || diagramMode === 'flowchart' ? 'auto' : 'none';
 
     const formatInstruction = selectedDiagramMode === 'none'
       ? l(
@@ -343,8 +343,8 @@ export async function POST(req: Request) {
         'FORMAT RULE: Do not wrap the answer in ```markdown / ```html or any other code fence. Output Markdown directly and do not start with "html" or "markdown".'
       )
       : l(
-        '【格式最高指令】：禁止使用 ```markdown、```html 等普通代码块；仅允许在图示位置使用一个 ```mermaid ... ``` 代码块来输出图示，其他正文必须是正常 Markdown 文本，且绝对不要在开头输出"html"或"markdown"等字眼！',
-        'FORMAT RULE: Do not use ```markdown / ```html code fences. Only one ```mermaid ... ``` block is allowed for the diagram; the rest must be normal Markdown text.'
+        '【格式最高指令】：禁止使用 ```markdown、```html 等普通代码块；仅允许在合适的图示位置使用一个或多个 ```mermaid ... ``` 代码块，其他正文必须是正常 Markdown 文本，且绝对不要在开头输出"html"或"markdown"等字眼！',
+        'FORMAT RULE: Do not use ```markdown / ```html code fences. Use one or more ```mermaid ... ``` blocks only where diagrams belong; the rest must be normal Markdown text.'
       );
 
     const systemMessage = isZh
@@ -421,52 +421,10 @@ ${formatInstruction}
         'Human writing style: avoid repetitive patterns; do not mention "as an AI" or any model identity.'
       ));
     }
-    if (selectedDiagramMode === 'mindmap') {
+    if (selectedDiagramMode === 'auto') {
       constraints.push(l(
-        '图示要求：请在正文中部最适合的位置插入1个 Mermaid 思维导图代码块，使用 ```mermaid 开始并以 ``` 结束。',
-        'Diagram: insert one Mermaid mind map block in the most suitable position in the middle of the document using ```mermaid ... ```.'
-      ));
-      constraints.push(l(
-        '思维导图语法要求：必须使用 mindmap 语法，并用缩进表达层级关系（建议每层缩进2个空格）。示例：\n' +
-          'mindmap\n' +
-          '  root((主题))\n' +
-          '    分支1\n' +
-          '      要点A\n' +
-          '    分支2\n' +
-          '      要点B',
-        'Mind map syntax: use mindmap and express hierarchy with indentation (recommend 2 spaces per level). Example:\n' +
-          'mindmap\n' +
-          '  root((Topic))\n' +
-          '    Branch 1\n' +
-          '      Point A\n' +
-          '    Branch 2\n' +
-          '      Point B'
-      ));
-      constraints.push(l(
-        '图示位置要求：图示前后各保留一段解释文字，不要把图示放在文末"参考资料"之后。',
-        'Placement: keep explanatory paragraphs before and after the diagram; do not place it after references.'
-      ));
-      constraints.push(l(
-        '图示兼容要求：图中节点文本禁止使用形如 [1] 的纯数字方括号，避免与引用编号冲突。',
-        'Compatibility: do not use bracketed numeric tokens like [1] inside diagram nodes.'
-      ));
-    }
-    if (selectedDiagramMode === 'flowchart') {
-      constraints.push(l(
-        '图示要求：请在正文中部最适合的位置插入1个 Mermaid 流程图代码块，使用 ```mermaid 开始并以 ``` 结束。',
-        'Diagram: insert one Mermaid flowchart block in the most suitable position in the middle of the document using ```mermaid ... ```.'
-      ));
-      constraints.push(l(
-        '流程图语法要求：必须使用 flowchart TD 语法，至少包含6个节点与5条连接线，清晰体现步骤先后关系。',
-        'Flowchart syntax: use flowchart TD with at least 6 nodes and 5 edges showing step order clearly.'
-      ));
-      constraints.push(l(
-        '图示位置要求：图示前后各保留一段解释文字，不要把图示放在文末"参考资料"之后。',
-        'Placement: keep explanatory paragraphs before and after the diagram; do not place it after references.'
-      ));
-      constraints.push(l(
-        '图示兼容要求：图中节点文本禁止使用形如 [1] 的纯数字方括号，避免与引用编号冲突。',
-        'Compatibility: do not use bracketed numeric tokens like [1] inside diagram nodes.'
+        '智能图示规划与插入：先根据用户要求、原始内容和最终文档结构判断图示是否能提供实际信息增益，再自行决定图示数量、类型及位置；严禁固定只生成1个。短篇或不适合可视化的文档可不插入，普通文档按内容插入适量图示，内容较长且包含多个独立流程/结构/对比主题时可插入多个，通常控制在1至4个，避免重复和装饰性图示。根据具体内容选择 Mermaid mindmap、flowchart TD、sequenceDiagram、timeline 或合适的图表；每个图示紧跟其解释的章节/段落之后，并置于相关总结或参考资料之前，前后文自然衔接。只输出可直接渲染的 Mermaid 代码块，不得输出图示源代码以外的普通代码块；图示节点应简洁准确，不得编造正文没有的信息，禁止在节点中使用形如 [1] 的纯数字方括号。',
+        'Smart diagram planning: inspect the request, source material, and resulting document structure, then decide whether diagrams add real value and determine their count, types, and exact placements. Never force exactly one. A short document or one unsuitable for visualization may have none; use a suitable number for ordinary documents, and multiple diagrams for long documents with distinct processes, structures, or comparisons. Usually keep the total to 1–4 and avoid repetition or decoration. Select suitable Mermaid syntax such as mindmap, flowchart TD, sequenceDiagram, timeline, or an appropriate chart. Place each diagram immediately after the section or paragraph it explains and before related conclusions or references, with natural prose transitions. Emit only renderable Mermaid blocks, no other fenced code blocks. Keep labels concise and factual, do not invent information absent from the document, and do not use bracketed numeric tokens like [1] in nodes.'
       ));
     }
     if (enableEvidenceSupport) {

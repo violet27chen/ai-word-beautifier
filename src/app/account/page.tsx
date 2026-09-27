@@ -21,6 +21,14 @@ export default function AccountPage() {
   const [notice, setNotice] = useState('');
   const [resetToken, setResetToken] = useState('');
   const [canResend, setCanResend] = useState(false);
+  const [codeSent, setCodeSent] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
+
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const timer = window.setTimeout(() => setResendCooldown((seconds) => Math.max(0, seconds - 1)), 1000);
+    return () => window.clearTimeout(timer);
+  }, [resendCooldown]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -42,6 +50,10 @@ export default function AccountPage() {
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (mode === 'register' && !codeSent) {
+      setError('请先点击“发送验证码”，再输入邮箱收到的验证码。');
+      return;
+    }
     if ((mode === 'register' || mode === 'reset') && !meetsPasswordPolicy(password)) {
       setError('密码至少需要 8 个字符，并且大写字母、小写字母、数字、特殊字符中至少包含 3 种。');
       return;
@@ -49,23 +61,19 @@ export default function AccountPage() {
     setBusy(true);
     setError('');
     try {
-      const endpoint = mode === 'reset' ? '/api/auth/password-reset/confirm' : mode === 'forgot' ? '/api/auth/password-reset' : `/api/auth/${mode}`;
-      const body = mode === 'reset' ? { token: resetToken, password } : mode === 'forgot' ? { email } : mode === 'verify' ? { email, code: verificationCode } : { email, password };
+      const registeringWithCode = mode === 'register' && codeSent;
+      const endpoint = mode === 'reset' ? '/api/auth/password-reset/confirm' : mode === 'forgot' ? '/api/auth/password-reset' : registeringWithCode ? '/api/auth/verify' : `/api/auth/${mode}`;
+      const body = mode === 'reset' ? { token: resetToken, password } : mode === 'forgot' ? { email } : mode === 'verify' || registeringWithCode ? { email, code: verificationCode } : { email, password };
       const response = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
       const result = await response.json() as { error?: string; verificationRequired?: boolean };
       if (!response.ok && mode === 'register' && result.verificationRequired) {
         setMode('verify'); setCanResend(true); setError(result.error || '账号已创建，请获取验证码后完成邮箱验证。'); return;
       }
       if (!response.ok) throw new Error(result.error || '操作失败，请稍后重试。');
-      if (mode === 'register') {
-        setMode('verify');
-        setPassword('');
-        setCanResend(true);
-        setNotice('验证码已发送到你的邮箱，请在下方输入 6 位验证码。');
-      } else if (mode === 'forgot') {
+      if (mode === 'forgot') {
         setMode('login');
         setNotice('如果该邮箱对应已验证账号，密码重置邮件将会发送。');
-      } else if (mode === 'login' || mode === 'verify') {
+      } else if (mode === 'login' || mode === 'verify' || registeringWithCode) {
         const returnTo = new URLSearchParams(window.location.search).get('returnTo');
         router.replace(returnTo?.startsWith('/') && !returnTo.startsWith('//') ? returnTo : '/');
         router.refresh();
@@ -76,6 +84,39 @@ export default function AccountPage() {
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : '操作失败，请稍后重试。');
       setCanResend(submitError instanceof Error && submitError.message.includes('邮箱尚未验证'));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function sendVerificationCode() {
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      setError('请先输入有效的邮箱地址。');
+      return;
+    }
+    if (!meetsPasswordPolicy(password)) {
+      setError('请先设置符合要求的密码，再发送验证码。');
+      return;
+    }
+    setBusy(true);
+    setError('');
+    setNotice('');
+    try {
+      const response = await fetch(codeSent ? '/api/auth/resend' : '/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(codeSent ? { email } : { email, password }),
+      });
+      const result = await response.json() as { error?: string; message?: string; verificationRequired?: boolean };
+      if (!response.ok && !(response.status === 503 && result.verificationRequired)) {
+        throw new Error(result.error || '验证码发送失败，请稍后重试。');
+      }
+      setCodeSent(true);
+      setVerificationCode('');
+      setResendCooldown(60);
+      setNotice(response.ok ? '验证码已发送，请输入邮件中的 6 位验证码。' : '账号已创建，但邮件发送失败；请稍后点击重发。');
+    } catch (sendError) {
+      setError(sendError instanceof Error ? sendError.message : '验证码发送失败，请稍后重试。');
     } finally {
       setBusy(false);
     }
@@ -97,9 +138,20 @@ export default function AccountPage() {
         <form className="space-y-4" onSubmit={submit}>
           {mode !== 'reset' && <label className="block text-sm font-medium text-gray-700">
             邮箱
-            <input required type="email" autoComplete="email" maxLength={254} value={email} onChange={(event) => setEmail(event.target.value)}
-              className="mt-1.5 w-full rounded-lg border border-gray-300 px-3 py-2.5 text-gray-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100" placeholder="name@example.com" />
+            <input required type="email" autoComplete="email" maxLength={254} value={email} disabled={mode === 'register' && codeSent} onChange={(event) => setEmail(event.target.value)}
+              className="mt-1.5 w-full rounded-lg border border-gray-300 px-3 py-2.5 text-gray-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 disabled:bg-gray-100 disabled:text-gray-500" placeholder="name@example.com" />
           </label>}
+          {mode === 'register' && <div className="block text-sm font-medium text-gray-700">
+            邮箱验证码
+            <div className="mt-1.5 flex gap-2">
+              <input required={codeSent} type="text" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={6} value={verificationCode} onChange={(event) => setVerificationCode(event.target.value.replace(/\D/g, '').slice(0, 6))}
+                className="min-w-0 flex-1 rounded-lg border border-gray-300 px-3 py-2.5 text-gray-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100" placeholder="输入 6 位验证码" />
+              <button type="button" onClick={sendVerificationCode} disabled={busy || resendCooldown > 0} className="w-32 shrink-0 cursor-pointer rounded-lg border border-indigo-200 bg-indigo-50 px-2 text-sm font-medium text-indigo-700 transition-colors hover:bg-indigo-100 disabled:cursor-not-allowed disabled:opacity-60">
+                {busy ? '发送中…' : resendCooldown > 0 ? `${resendCooldown} 秒后重发` : codeSent ? '重新发送' : '发送验证码'}
+              </button>
+            </div>
+            <span className="mt-1 block text-xs font-normal text-gray-500">验证码 10 分钟内有效。请检查收件箱和垃圾邮件。</span>
+          </div>}
           {mode === 'verify' && <label className="block text-sm font-medium text-gray-700">
             邮箱验证码
             <input required type="text" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={6} value={verificationCode} onChange={(event) => setVerificationCode(event.target.value.replace(/\D/g, '').slice(0, 6))}
@@ -108,8 +160,8 @@ export default function AccountPage() {
           </label>}
           {mode !== 'forgot' && mode !== 'verify' && <label className="block text-sm font-medium text-gray-700">
             {mode === 'reset' ? '新密码' : '密码'}
-            <input required type="password" autoComplete={mode === 'login' ? 'current-password' : 'new-password'} minLength={mode === 'register' || mode === 'reset' ? 8 : 1} maxLength={128} value={password} onChange={(event) => setPassword(event.target.value)}
-              className="mt-1.5 w-full rounded-lg border border-gray-300 px-3 py-2.5 text-gray-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100" placeholder={mode === 'register' || mode === 'reset' ? '至少 8 个字符' : '请输入密码'} />
+            <input required type="password" autoComplete={mode === 'login' ? 'current-password' : 'new-password'} minLength={mode === 'register' || mode === 'reset' ? 8 : 1} maxLength={128} value={password} disabled={mode === 'register' && codeSent} onChange={(event) => setPassword(event.target.value)}
+              className="mt-1.5 w-full rounded-lg border border-gray-300 px-3 py-2.5 text-gray-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 disabled:bg-gray-100 disabled:text-gray-500" placeholder={mode === 'register' || mode === 'reset' ? '至少 8 个字符' : '请输入密码'} />
             {(mode === 'register' || mode === 'reset') && <>
               <span className="mt-1 block text-xs font-normal leading-5 text-gray-500">至少 8 个字符，并包含以下 4 种类型中的至少 3 种：大写字母、小写字母、数字、特殊字符。</span>
               {(() => {
@@ -130,11 +182,10 @@ export default function AccountPage() {
               })()}
             </>}
           </label>}
-          {mode === 'register' && <p className="text-xs leading-5 text-gray-500">注册会保存邮箱及账号/使用统计，不保存正文和图片。注册后输入邮件验证码即可完成验证并登录。</p>}
           {notice && <p role="status" className="rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-700">{notice}</p>}
           {error && <p role="alert" className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</p>}
           <button type="submit" disabled={busy} className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 py-2.5 font-medium text-white transition-colors hover:bg-indigo-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60">
-            {busy && <LoaderCircle className="h-4 w-4 animate-spin" />}{{ login: '登录', register: '创建账号并发送验证码', verify: '验证邮箱并登录', forgot: '发送重置邮件', reset: '保存新密码' }[mode]}
+            {busy && <LoaderCircle className="h-4 w-4 animate-spin" />}{{ login: '登录', register: '创建账号', verify: '验证邮箱并登录', forgot: '发送重置邮件', reset: '保存新密码' }[mode]}
           </button>
         </form>
         {(canResend || mode === 'verify') && mode !== 'reset' && <button type="button" disabled={busy} onClick={async () => {
@@ -149,7 +200,7 @@ export default function AccountPage() {
         }} className="mt-3 w-full cursor-pointer rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 disabled:cursor-not-allowed">重新发送验证码</button>}
         <div className="mt-5 flex flex-wrap items-center justify-center gap-3 text-sm text-gray-600">
           {mode === 'login' && <button type="button" onClick={() => { setMode('forgot'); setError(''); setNotice(''); }} className="cursor-pointer text-gray-500 underline decoration-gray-300 underline-offset-4 hover:text-gray-800">忘记密码</button>}
-          {mode !== 'reset' && mode !== 'verify' && <button type="button" onClick={() => { setMode(mode === 'register' ? 'login' : mode === 'login' ? 'register' : 'login'); setError(''); setNotice(''); setCanResend(false); setVerificationCode(''); }} className="cursor-pointer rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 font-medium text-indigo-700 hover:bg-indigo-100">
+          {mode !== 'reset' && mode !== 'verify' && <button type="button" onClick={() => { setMode(mode === 'register' ? 'login' : mode === 'login' ? 'register' : 'login'); setError(''); setNotice(''); setCanResend(false); setVerificationCode(''); setCodeSent(false); setResendCooldown(0); }} className="cursor-pointer rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 font-medium text-indigo-700 hover:bg-indigo-100">
             {mode === 'register' ? '已有账号？返回登录' : mode === 'login' ? '还没有账号？立即注册' : '返回登录'}
           </button>}
         </div>

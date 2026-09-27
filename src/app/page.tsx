@@ -74,8 +74,7 @@ const PERF_LEVELS = [
 
 const DIAGRAM_MODES = [
   { value: 'none', label: '不生成图示' },
-  { value: 'mindmap', label: '自动思维导图' },
-  { value: 'flowchart', label: '自动流程图' },
+  { value: 'auto', label: '智能自动插入' },
 ];
 
 let mammothPromise: Promise<typeof import('mammoth/mammoth.browser')> | null = null;
@@ -341,7 +340,7 @@ export default function Home() {
       evidenceLabel: 'Evidence support',
       evidenceHint: 'Adds verifiable references (URLs, papers, articles) where appropriate.',
       diagramLabel: 'Diagrams',
-      diagramHint: 'Optionally insert a Mermaid diagram block to clarify structure and flow.',
+      diagramHint: 'AI chooses the number, type, and placement of diagrams based on the document, then inserts them into the content.',
       signatureTitle: 'Signature & Date',
       signatureToggle: 'Enable signature & date',
       authorLabel: 'Author (Optional)',
@@ -414,7 +413,7 @@ export default function Home() {
       evidenceLabel: '数据与案例支撑',
       evidenceHint: '开启后会在合适段落插入可核验的来源引用（网址、论文或文章）',
       diagramLabel: '自动图示插入',
-      diagramHint: '可选在正文关键位置自动插入 Mermaid 图示代码块，便于梳理结构和流程。',
+      diagramHint: '由 AI 根据文档内容与篇幅决定图示数量、类型及插入位置，并直接插入正文。',
       signatureTitle: '署名与日期',
       signatureToggle: '启用署名与日期',
       authorLabel: '文档署名 / 报告者 (可选)',
@@ -491,8 +490,7 @@ export default function Home() {
     ? DIAGRAM_MODES
     : [
       { value: 'none', label: 'None' },
-      { value: 'mindmap', label: 'Mind map' },
-      { value: 'flowchart', label: 'Flowchart' },
+      { value: 'auto', label: 'Smart auto-insert' },
     ];
 
   const cleanMarkdown = displayedMarkdown
@@ -654,7 +652,7 @@ export default function Home() {
       if (typeof draft.addTypos === 'boolean') setAddTypos(draft.addTypos);
       if (typeof draft.humanTrace === 'boolean') setHumanTrace(draft.humanTrace);
       if (typeof draft.enableEvidenceSupport === 'boolean') setEnableEvidenceSupport(draft.enableEvidenceSupport);
-      if (draft.diagramMode === 'none' || draft.diagramMode === 'mindmap' || draft.diagramMode === 'flowchart') setDiagramMode(draft.diagramMode);
+      if (draft.diagramMode === 'none' || draft.diagramMode === 'auto' || draft.diagramMode === 'mindmap' || draft.diagramMode === 'flowchart') setDiagramMode(draft.diagramMode === 'none' ? 'none' : 'auto');
       if (typeof draft.enableSignatureDate === 'boolean') setEnableSignatureDate(draft.enableSignatureDate);
       if (typeof draft.authorName === 'string') setAuthorName(draft.authorName);
       if (typeof draft.documentDate === 'string') setDocumentDate(draft.documentDate);
