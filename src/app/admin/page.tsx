@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Activity, KeyRound, RefreshCw, ShieldCheck, TriangleAlert } from 'lucide-react';
+import { Activity, RefreshCw, ShieldCheck, TriangleAlert } from 'lucide-react';
 import Link from 'next/link';
 
 type EnvStatus = {
@@ -13,7 +13,6 @@ type AdminEvent = {
   id: string;
   type: 'generate' | 'download';
   status: 'success' | 'error';
-  model?: string;
   hasImages?: boolean;
   promptLength?: number;
   markdownLength?: number;
@@ -53,10 +52,6 @@ type OverviewPayload = {
     recentEvents: AdminEvent[];
   };
 };
-
-function statusColor(value: boolean) {
-  return value ? 'bg-emerald-100 text-emerald-700 border-emerald-200' : 'bg-rose-100 text-rose-700 border-rose-200';
-}
 
 function formatDateTime(input: string) {
   const d = new Date(input);
@@ -320,14 +315,6 @@ export default function AdminPage() {
     return () => window.clearInterval(timer);
   }, [authorized, password]);
 
-  const envRows = useMemo(() => {
-    if (!payload) return [];
-    return [
-      { key: 'DeepSeek', value: payload.envStatus.deepseek },
-      { key: 'MCP Search', value: payload.envStatus.mcpSearch },
-    ];
-  }, [payload]);
-
   const trendRows = useMemo(() => {
     if (!payload) return [];
     const requestsByDate = new Map(payload.overview.requestsByDay.map((item) => [item.date, item]));
@@ -419,19 +406,13 @@ export default function AdminPage() {
 
               <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
                 <div className="mb-4 flex items-center gap-2 text-gray-800">
-                  <KeyRound className="h-5 w-5 text-indigo-600" />
-                  <span className="font-semibold">环境变量状态</span>
+                  <ShieldCheck className="h-5 w-5 text-indigo-600" />
+                  <span className="font-semibold">核心服务状态</span>
                 </div>
-                <div className="flex flex-wrap gap-2">
-                  {envRows.map((item) => (
-                    <span
-                      key={item.key}
-                      className={`rounded-full border px-3 py-1 text-xs font-medium ${statusColor(item.value)}`}
-                    >
-                      {item.key}：{item.value ? '已配置' : '未配置'}
-                    </span>
-                  ))}
-                </div>
+                <p className={`text-sm font-medium ${payload?.envStatus.deepseek ? 'text-emerald-700' : 'text-rose-700'}`}>
+                  {payload?.envStatus.deepseek ? 'AI 生成服务已就绪' : 'AI 生成服务配置异常'}
+                </p>
+                <p className="mt-1 text-xs text-gray-500">仅显示服务可用状态，不展示部署变量详情</p>
               </div>
             </div>
 
@@ -564,8 +545,7 @@ export default function AdminPage() {
                       <th className="px-2 py-2">时间</th>
                       <th className="px-2 py-2">类型</th>
                       <th className="px-2 py-2">状态</th>
-                      <th className="px-2 py-2">模型</th>
-                      <th className="px-2 py-2">附加信息</th>
+                      <th className="px-2 py-2">详情</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -578,11 +558,17 @@ export default function AdminPage() {
                             {event.status}
                           </span>
                         </td>
-                        <td className="px-2 py-2">{event.model || '-'}</td>
                         <td className="px-2 py-2">
-                          {event.status === 'error'
-                            ? event.errorMessage || '-'
-                            : `图片:${event.hasImages ? '是' : '否'} / Prompt:${event.promptLength ?? '-'} / Markdown:${event.markdownLength ?? '-'}`}
+                          <details>
+                            <summary className="w-fit cursor-pointer select-none text-indigo-600 hover:text-indigo-800">
+                              查看详情
+                            </summary>
+                            <div className="mt-2 max-w-xl whitespace-pre-wrap break-words rounded-md bg-gray-50 p-3 text-xs text-gray-600">
+                              {event.status === 'error'
+                                ? event.errorMessage || '无错误详情'
+                                : `图片输入：${event.hasImages ? '是' : '否'}\nPrompt 长度：${event.promptLength ?? '-'}\nMarkdown 长度：${event.markdownLength ?? '-'}`}
+                            </div>
+                          </details>
                         </td>
                       </tr>
                     ))}
