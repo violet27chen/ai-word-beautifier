@@ -18,7 +18,7 @@ export async function POST(request: Request) {
         }
       }
     }
-    return NextResponse.json({ ok: true, message: '如果账号需要验证且邮箱有效，验证邮件将会发送。' });
+    return NextResponse.json({ ok: true, message: '如该邮箱对应未验证账号，验证码已重新发送，请查收邮件。' });
   } catch (error) {
     console.error('Verification email request failed:', error instanceof Error ? error.message : 'unknown error');
     return NextResponse.json({ error: '暂时无法处理请求，请稍后重试。' }, { status: 500 });

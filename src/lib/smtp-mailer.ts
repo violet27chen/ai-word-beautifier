@@ -1,6 +1,6 @@
 import { connect, type TLSSocket } from 'node:tls';
 
-type MailMessage = { to: string; subject: string; text: string };
+type MailMessage = { to: string; subject: string; text: string; html?: string };
 
 function encodeBase64(value: string) {
   const bytes = new TextEncoder().encode(value);
@@ -118,6 +118,7 @@ export async function sendTransactionalEmail(message: MailMessage) {
     await command(`RCPT TO:<${message.to}>`, '250');
     await command('DATA', '354');
 
+    const boundary = `aiword_${crypto.randomUUID().replace(/-/g, '')}`;
     const body = [
       `From: AI Word Assistant <${from}>`,
       `To: <${message.to}>`,
@@ -125,10 +126,10 @@ export async function sendTransactionalEmail(message: MailMessage) {
       `Date: ${new Date().toUTCString()}`,
       `Message-ID: <${crypto.randomUUID()}@violet27chen.com>`,
       'MIME-Version: 1.0',
-      'Content-Type: text/plain; charset=UTF-8',
-      'Content-Transfer-Encoding: base64',
+      ...(message.html
+        ? [`Content-Type: multipart/alternative; boundary="${boundary}"`, '', `--${boundary}`, 'Content-Type: text/plain; charset=UTF-8', 'Content-Transfer-Encoding: base64', '', encodeBase64(message.text), `--${boundary}`, 'Content-Type: text/html; charset=UTF-8', 'Content-Transfer-Encoding: base64', '', encodeBase64(message.html), `--${boundary}--`]
+        : ['Content-Type: text/plain; charset=UTF-8', 'Content-Transfer-Encoding: base64', '', encodeBase64(message.text)]),
       '',
-      encodeBase64(message.text),
       '.',
       '',
     ].join('\r\n');

@@ -1400,9 +1400,9 @@ export default function Home() {
 
           <div className="flex-1 min-h-0 flex flex-col lg:flex-row gap-6">
           {/* Left Column: Advanced Settings */}
-          <div className="w-full lg:w-[25%] lg:h-full lg:overflow-y-auto lg:pr-2 pb-6 space-y-6 hide-scrollbar">
+          <div className="w-full lg:w-[25%] lg:h-full lg:min-h-0 lg:overflow-y-auto lg:pr-2 hide-scrollbar">
             <div
-              className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 outline-none focus-within:ring-2 focus-within:ring-indigo-100"
+              className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 outline-none focus-within:ring-2 focus-within:ring-indigo-100 lg:min-h-full"
               tabIndex={0}
             >
               <h2 className="text-lg font-semibold text-gray-800 mb-6 flex items-center gap-2">
@@ -1659,8 +1659,8 @@ export default function Home() {
           </div>
 
           {/* Right Column: Actions & Status */}
-          <div className="w-full lg:w-[40%] lg:h-full lg:overflow-y-auto lg:pr-2 pb-6 flex flex-col custom-scrollbar">
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 flex flex-col min-h-max">
+          <div className="w-full lg:w-[40%] lg:h-full lg:overflow-y-auto lg:pr-2 pb-6 flex flex-col hide-scrollbar">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 flex flex-col min-h-max lg:min-h-full">
               <h2 className="text-lg font-semibold text-gray-800 mb-4 shrink-0">{locale === 'zh' ? '操作面板' : 'Actions'}</h2>
 
               <button
@@ -1896,22 +1896,22 @@ export default function Home() {
               {locale === 'zh' ? (
                 <>
                   <h4>1. 数据收集与流转</h4>
-                  <p>注册账号时，我们会保存您的邮箱、密码派生摘要（不保存明文密码）、注册时间及最近登录时间，并使用 HttpOnly Cookie 和服务端会话记录维持登录状态。登录后发起的生成和下载请求会关联到账号，用于后台统计请求类型、结果、时间、输入长度、图片使用情况及错误摘要；本平台不保存您提交的正文、提示词或图片内容。我们还会记录由访问 IP 和浏览器标识组成的访问统计信息以估算 PV/UV，并对登录尝试进行限频。生成所需的输入会通过 HTTPS 发送至 DeepSeek API 进行实时处理。</p>
+                  <p>注册和验证邮箱时，我们会处理您的邮箱地址、邮箱验证码及其有效期，并保存密码派生摘要（不保存明文密码）、账号创建/最近登录时间和服务端会话摘要；登录状态由 HttpOnly Cookie 维持。生成和下载功能仅向已登录用户开放，相关请求会关联账号，用于统计请求类型、结果、时间、输入长度、图片使用情况及错误摘要。为估算访问量和独立访客，我们会记录访问 IP 地址及浏览器 User-Agent；登录相关限频使用由 IP 派生的摘要标识。本应用业务数据库不保存您提交的提示词、文档正文或图片原始内容。账号、会话和必要的统计数据存储在本服务配置的数据库（Cloudflare D1 或 MySQL）中。</p>
                   <h4>2. 上游数据安全与隐私边界</h4>
-                  <p>本平台不控制上游 AI 厂商的数据处理行为。您的文档输入会发送至 DeepSeek 进行实时推理；邮箱验证和密码重置邮件会通过配置的邮件服务商发送。相关数据处理分别受其用户协议与隐私政策约束。本平台强烈建议您不要上传国家机密、商业机密或敏感个人隐私信息。</p>
+                  <p>为提供服务，您提交的提示词、文档内容及图片会通过 HTTPS 发送给 DeepSeek（模型：deepseek-flash）处理；验证邮箱和重置密码所需的邮箱地址及邮件内容会交由配置的邮件服务商发送；本服务运行及数据库由 Cloudflare 或配置的 MySQL 服务提供基础设施支持。各服务商对其所处理数据的保存和使用受其自身政策约束，本平台无法控制或代其作出承诺。请勿提交国家秘密、商业秘密、账号凭证或不必要的敏感个人信息。</p>
                   <h4>3. 模型训练声明</h4>
-                  <p>本平台自身**绝对不会**利用您上传的任何数据进行模型训练或微调。关于上游 AI 厂商是否会利用您的 API 请求数据进行模型迭代，请参阅其官方声明。一般情况下，API 接入商会承诺不对企业接口数据进行训练，但请以官方最新政策为准。</p>
+                  <p>本应用不会将您提交的内容用于训练或微调本应用自有模型。本应用使用 DeepSeek API 提供模型推理；DeepSeek 对 API 请求数据的处理、保存及是否用于模型改进，以 DeepSeek 当时有效的官方政策为准，本应用不对第三方政策作保证。</p>
                   <h4>4. 政策更新</h4>
                   <p>我们保留随时更新本政策的权利。本政策变更后将以最新版本为准。</p>
                 </>
               ) : (
                 <>
                   <h4>1. Data flow</h4>
-                  <p>When you register, we store your email address, a derived password hash (never the plaintext password), account timestamps, and a server-side session record; the browser session cookie is HttpOnly. Requests made while signed in are associated with your account for usage analytics (request type, result, time, input length, image usage, and error summary). We also record visitor IP/browser identifiers to estimate PV/UV and apply rate limits to sign-in attempts. We do not store the prompt, document text, or uploaded images in our database. Inputs are sent over HTTPS to DeepSeek for processing.</p>
+                  <p>For registration and email verification, we process your email address and verification code (including its expiry), and store a derived password hash (not your plaintext password), account timestamps, and a server-side session hash; an HttpOnly cookie maintains your signed-in state. Generation and download are available only to signed-in users. Related requests are associated with your account for usage analytics (request type, result, time, input length, image usage, and error summary). We record visitor IP addresses and browser User-Agent values to estimate visits and unique visitors; sign-in rate limiting uses a derived IP identifier. The application database does not store submitted prompts, document text, or original image contents. Account, session, and necessary analytics data are stored in the configured database (Cloudflare D1 or MySQL).</p>
                   <h4>2. Third-party processing</h4>
-                  <p>Document inputs are sent to DeepSeek for real-time inference. Email verification and password reset messages are sent through the configured email provider. Please review the respective providers&apos; terms and privacy policies.</p>
+                  <p>Your prompts, document content, and images are sent over HTTPS to DeepSeek (model: deepseek-flash) for processing. Email addresses and message content needed for verification and password resets are sent through the configured email provider. Cloudflare or the configured MySQL provider supplies the service infrastructure and database. Each provider processes data under its own policies; this site cannot control or make promises on their behalf. Do not submit state secrets, trade secrets, credentials, or unnecessary sensitive personal information.</p>
                   <h4>3. Model training</h4>
-                  <p>This site does not use your inputs to train or fine-tune models. For third-party providers, refer to their official statements regarding data retention and training.</p>
+                  <p>This application does not use your inputs to train or fine-tune an application-owned model. DeepSeek processes requests through its API; its handling, retention, and use of API data for model improvement are governed by its then-current official policies, which this site cannot guarantee on its behalf.</p>
                   <h4>4. Updates</h4>
                   <p>We may update this policy from time to time. The latest version will apply.</p>
                 </>
@@ -1938,7 +1938,7 @@ export default function Home() {
               {locale === 'zh' ? (
                 <>
                   <h4>1. 服务说明</h4>
-                  <p>&quot;AI Word 排版美化助手&quot;为您提供基于人工智能的文档生成与排版美化服务。您应合法、合规地使用本工具，不得利用本工具生成违反国家法律法规、危害国家安全、破坏社会稳定、侵犯他人合法权益的内容。</p>
+                  <p>&quot;AI Word 排版美化助手&quot;为您提供基于人工智能的文档生成与排版美化服务。浏览网站无需登录；使用生成和下载功能须注册账号、完成邮箱验证并保持登录状态。您应妥善保管账号凭证，并合法、合规地使用本工具，不得利用本工具生成违反适用法律法规、危害公共安全或侵犯他人合法权益的内容。</p>
                   <h4>2. 知识产权与版权风险申明</h4>
                   <p>本平台不主动使用未经授权的特定字体、模板或受版权保护的图片进行内容生成。但请注意，由于 AI 模型的特性，生成的文本或内容可能偶有雷同，或者模型在训练时可能受到未知数据的干扰。<strong>用户需自行对使用本工具生成的文档负责，并承担因商用等目的引发的任何版权、著作权纠纷的直接或间接法律责任。</strong></p>
                   <h4>3. 服务的可用性与免责声明</h4>
@@ -1949,7 +1949,7 @@ export default function Home() {
               ) : (
                 <>
                   <h4>1. Service description</h4>
-                  <p>This site provides AI-assisted document generation and formatting. You agree to use the service in compliance with applicable laws and regulations.</p>
+                  <p>This site provides AI-assisted document generation and formatting. Browsing does not require an account, but generation and downloads require a registered account, verified email address, and signed-in session. You are responsible for safeguarding your account credentials and using the service lawfully; do not generate content that violates applicable laws or infringes others&apos; rights.</p>
                   <h4>2. IP and copyright</h4>
                   <p>AI-generated content may be similar to existing materials. You are responsible for reviewing outputs and ensuring you have the necessary rights before using them commercially.</p>
                   <h4>3. Availability disclaimer</h4>

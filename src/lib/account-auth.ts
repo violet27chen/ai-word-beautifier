@@ -22,6 +22,10 @@ function fromHex(value: string) {
   return new Uint8Array(value.match(/.{2}/g)?.map((part) => Number.parseInt(part, 16)) || []);
 }
 
+function escapeHtml(value: string) {
+  return value.replace(/[&<>"']/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character] || character);
+}
+
 export function normalizeEmail(value: unknown) {
   return typeof value === 'string' ? value.trim().toLowerCase() : '';
 }
@@ -65,20 +69,32 @@ export async function issueAccountSession(userId: string) {
 }
 
 export async function sendAccountActionEmail(user: Pick<AccountUser, 'id' | 'email'>, purpose: AccountTokenPurpose, request: Request) {
-  const bytes = crypto.getRandomValues(new Uint8Array(32));
-  const token = toHex(bytes);
-  const expiresInSeconds = purpose === 'verify_email' ? 60 * 60 * 24 : 60 * 60;
-  await createAccountToken(user.id, purpose, await hashSessionToken(token), new Date(Date.now() + expiresInSeconds * 1000).toISOString());
-  const url = new URL(purpose === 'verify_email' ? '/api/auth/verify' : '/account', request.url);
-  if (purpose === 'verify_email') url.searchParams.set('token', token);
-  else url.searchParams.set('resetToken', token);
   const isVerification = purpose === 'verify_email';
+  const token = isVerification
+    ? String(crypto.getRandomValues(new Uint32Array(1))[0] % 1_000_000).padStart(6, '0')
+    : toHex(crypto.getRandomValues(new Uint8Array(32)));
+  const expiresInSeconds = isVerification ? 10 * 60 : 60 * 60;
+  const tokenHash = await hashSessionToken(isVerification ? `${user.email}:${token}` : token);
+  await createAccountToken(user.id, purpose, tokenHash, new Date(Date.now() + expiresInSeconds * 1000).toISOString());
+  const url = new URL('/account', request.url);
+  if (!isVerification) url.searchParams.set('resetToken', token);
+  const subject = isVerification ? 'AI Word 排版美化助手｜邮箱验证码' : 'AI Word 排版美化助手｜重置密码';
+  const title = isVerification ? '验证你的邮箱' : '重置账号密码';
+  const instruction = isVerification
+    ? '请在页面中输入以下验证码，完成邮箱验证。'
+    : '我们收到了重置账号密码的请求，请点击下方按钮设置新密码。';
+  const escapedEmail = escapeHtml(user.email);
+  const codeOrButton = isVerification
+    ? `<div style="margin:24px 0;padding:18px 20px;border:1px solid #e0e7ff;border-radius:12px;background:#f5f3ff;text-align:center;color:#4338ca;font-size:32px;font-weight:700;letter-spacing:10px;">${token}</div><p style="margin:0;color:#64748b;font-size:13px;">验证码 10 分钟内有效，请勿分享给他人。</p>`
+    : `<div style="margin:24px 0;text-align:center;"><a href="${escapeHtml(url.toString())}" style="display:inline-block;padding:12px 24px;border-radius:9px;background:#4f46e5;color:#ffffff;text-decoration:none;font-size:15px;font-weight:600;">设置新密码</a></div><p style="margin:0;color:#64748b;font-size:13px;">此链接 1 小时内有效。</p>`;
+  const html = `<!doctype html><html lang="zh-CN"><body style="margin:0;padding:32px 12px;background:#f3f4f6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Microsoft YaHei',sans-serif;color:#0f172a;"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:560px;margin:0 auto;background:#ffffff;border:1px solid #e5e7eb;border-radius:16px;overflow:hidden;"><tr><td style="padding:22px 28px;border-bottom:1px solid #eef2f7;"><table role="presentation" cellspacing="0" cellpadding="0"><tr><td style="width:38px;height:38px;border-radius:10px;background:#4f46e5;color:#ffffff;text-align:center;vertical-align:middle;font-size:20px;font-weight:700;">W</td><td style="padding-left:12px;color:#111827;font-size:17px;font-weight:700;">AI Word 排版美化助手</td></tr></table></td></tr><tr><td style="padding:30px 28px 32px;"><h1 style="margin:0 0 12px;font-size:22px;line-height:1.4;">${title}</h1><p style="margin:0;color:#475569;font-size:15px;line-height:1.8;">你好，${escapedEmail}：</p><p style="margin:8px 0 0;color:#475569;font-size:15px;line-height:1.8;">${instruction}</p>${codeOrButton}<p style="margin:24px 0 0;color:#64748b;font-size:13px;line-height:1.7;">如果这不是你本人发起的操作，请忽略此邮件。为保障账号安全，请不要向任何人透露验证码。</p></td></tr><tr><td style="padding:16px 28px;background:#f8fafc;border-top:1px solid #eef2f7;color:#94a3b8;font-size:12px;line-height:1.6;">此邮件由 AI Word 排版美化助手自动发送，请勿直接回复。<br>© AI Word 排版美化助手</td></tr></table></body></html>`;
   await sendTransactionalEmail({
     to: user.email,
-    subject: isVerification ? 'Verify your AI Word account' : 'Reset your AI Word password',
+    subject,
     text: isVerification
-      ? `您好，\n\n请在 24 小时内访问以下链接验证邮箱并登录：\n${url.toString()}\n\n如果这不是您发起的操作，请忽略此邮件。`
-      : `您好，\n\n请在 1 小时内访问以下链接重置密码：\n${url.toString()}\n\n如果这不是您发起的操作，请忽略此邮件。`,
+      ? `AI Word 排版美化助手\n\n你的邮箱验证码是：${token}\n请在 10 分钟内输入验证码完成验证。\n\n如果这不是你本人发起的操作，请忽略此邮件。请勿向任何人透露验证码。`
+      : `AI Word 排版美化助手\n\n请在 1 小时内打开以下链接重置密码：\n${url.toString()}\n\n如果这不是你本人发起的操作，请忽略此邮件。`,
+    html,
   });
 }
 
