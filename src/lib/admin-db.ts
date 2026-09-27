@@ -33,11 +33,13 @@ let mysqlInitialized = false;
 let d1Initialized = false;
 let d1Initialization: Promise<void> | null = null;
 
-const D1_SCHEMA = `
+const D1_SCHEMA = [
+  `
   CREATE TABLE IF NOT EXISTS admin_meta (
     key TEXT PRIMARY KEY,
     value TEXT NOT NULL
-  );
+  )`,
+  `
   CREATE TABLE IF NOT EXISTS admin_events (
     id TEXT PRIMARY KEY,
     type TEXT NOT NULL,
@@ -48,18 +50,19 @@ const D1_SCHEMA = `
     markdown_length INTEGER,
     error_message TEXT,
     created_at TEXT NOT NULL
-  );
-  CREATE INDEX IF NOT EXISTS idx_admin_events_created_at ON admin_events(created_at);
-  CREATE INDEX IF NOT EXISTS idx_admin_events_type ON admin_events(type);
+  )`,
+  'CREATE INDEX IF NOT EXISTS idx_admin_events_created_at ON admin_events(created_at)',
+  'CREATE INDEX IF NOT EXISTS idx_admin_events_type ON admin_events(type)',
+  `
   CREATE TABLE IF NOT EXISTS admin_visits (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     visitor_key TEXT NOT NULL,
     date_key TEXT NOT NULL,
     created_at TEXT NOT NULL
-  );
-  CREATE INDEX IF NOT EXISTS idx_admin_visits_date_key ON admin_visits(date_key);
-  CREATE INDEX IF NOT EXISTS idx_admin_visits_visitor_key ON admin_visits(visitor_key);
-`;
+  )`,
+  'CREATE INDEX IF NOT EXISTS idx_admin_visits_date_key ON admin_visits(date_key)',
+  'CREATE INDEX IF NOT EXISTS idx_admin_visits_visitor_key ON admin_visits(visitor_key)',
+];
 
 async function getD1Database(): Promise<D1Database | null> {
   try {
@@ -136,7 +139,9 @@ async function ensureD1Tables(db: D1Database) {
   if (d1Initialized) return;
   if (!d1Initialization) {
     d1Initialization = (async () => {
-      await db.exec(D1_SCHEMA);
+      for (const statement of D1_SCHEMA) {
+        await db.prepare(statement).run();
+      }
       await db.prepare('INSERT OR IGNORE INTO admin_meta(key, value) VALUES(?, ?)')
         .bind('startedAt', new Date().toISOString())
         .run();
