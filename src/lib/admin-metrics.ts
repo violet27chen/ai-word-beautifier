@@ -26,6 +26,7 @@ export async function getAdminOverview() {
   const aggregates = await getAdminAggregates();
   const trafficByDate = new Map(aggregates.last7Days.map((item) => [item.date, item]));
   const requestsByDate = new Map(aggregates.last7RequestDays.map((item) => [item.date, item]));
+  const requestsByHour = new Map(aggregates.hourlyRequests.map((item) => [item.hour, item.requests]));
   const last7DateKeys = Array.from({ length: 7 }, (_, index) =>
     new Date(Date.now() - (6 - index) * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
   );
@@ -38,6 +39,10 @@ export async function getAdminOverview() {
     date,
     generate: requestsByDate.get(date)?.generate || 0,
     download: requestsByDate.get(date)?.download || 0,
+  }));
+  const hourlyRequests = Array.from({ length: 24 }, (_, hour) => ({
+    hour,
+    requests: requestsByHour.get(hour) || 0,
   }));
   const totalRequests = aggregates.generateTotal + aggregates.downloadTotal;
   const recentEvents = (await getRecentAdminEvents(80)).map((item) => ({
@@ -67,6 +72,14 @@ export async function getAdminOverview() {
       last7Days,
     },
     requestsByDay: last7RequestDays,
+    requestInsights: {
+      total: totalRequests,
+      success: aggregates.generateSuccess + aggregates.downloadSuccess,
+      errors: aggregates.generateError + aggregates.downloadError,
+      generateWithImages: aggregates.generateWithImages,
+      generateTextOnly: aggregates.generateTextOnly,
+      hourlyRequests,
+    },
     recentEvents,
   };
 }

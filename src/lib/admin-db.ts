@@ -231,6 +231,7 @@ export async function getAdminStartedAt(): Promise<string> {
 export async function getAdminAggregates() {
   const database = await getDatabase();
   const todayKey = new Date().toISOString().slice(0, 10);
+  const firstHourDayKey = new Date(Date.now() - 29 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
 
   if (database.kind === 'd1') {
     const firstDayKey = new Date(Date.now() - 6 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
@@ -241,7 +242,9 @@ export async function getAdminAggregates() {
         SUM(CASE WHEN type = 'generate' AND status = 'error' THEN 1 ELSE 0 END) AS generate_error,
         SUM(CASE WHEN type = 'download' THEN 1 ELSE 0 END) AS download_total,
         SUM(CASE WHEN type = 'download' AND status = 'success' THEN 1 ELSE 0 END) AS download_success,
-        SUM(CASE WHEN type = 'download' AND status = 'error' THEN 1 ELSE 0 END) AS download_error
+        SUM(CASE WHEN type = 'download' AND status = 'error' THEN 1 ELSE 0 END) AS download_error,
+        SUM(CASE WHEN type = 'generate' AND has_images = 1 THEN 1 ELSE 0 END) AS generate_with_images,
+        SUM(CASE WHEN type = 'generate' AND (has_images = 0 OR has_images IS NULL) THEN 1 ELSE 0 END) AS generate_text_only
       FROM admin_events
     `).first<Record<string, number | null>>() || {};
     const total = await database.db.prepare('SELECT COUNT(*) AS count FROM admin_visits').first<{ count: number }>();
@@ -268,6 +271,13 @@ export async function getAdminAggregates() {
       generate_total: number;
       download_total: number;
     }>();
+    const hourlyRequests = await database.db.prepare(`
+      SELECT substr(created_at, 12, 2) AS hour, COUNT(*) AS requests
+      FROM admin_events
+      WHERE substr(created_at, 1, 10) >= ? AND substr(created_at, 1, 10) <= ?
+      GROUP BY substr(created_at, 12, 2)
+      ORDER BY hour
+    `).bind(firstHourDayKey, todayKey).all<{ hour: string; requests: number }>();
 
     return {
       generateTotal: Number(eventAgg.generate_total) || 0,
@@ -276,6 +286,8 @@ export async function getAdminAggregates() {
       downloadTotal: Number(eventAgg.download_total) || 0,
       downloadSuccess: Number(eventAgg.download_success) || 0,
       downloadError: Number(eventAgg.download_error) || 0,
+      generateWithImages: Number(eventAgg.generate_with_images) || 0,
+      generateTextOnly: Number(eventAgg.generate_text_only) || 0,
       totalVisits: Number(total?.count) || 0,
       uniqueVisitors: Number(unique?.count) || 0,
       todayVisits: Number(today?.count) || 0,
@@ -290,6 +302,10 @@ export async function getAdminAggregates() {
         generate: Number(item.generate_total) || 0,
         download: Number(item.download_total) || 0,
       })),
+      hourlyRequests: (hourlyRequests.results || []).map((item) => ({
+        hour: Number(item.hour),
+        requests: Number(item.requests) || 0,
+      })),
     };
   }
 
@@ -301,7 +317,9 @@ export async function getAdminAggregates() {
       SUM(CASE WHEN type = 'generate' AND status = 'error' THEN 1 ELSE 0 END) AS generate_error,
       SUM(CASE WHEN type = 'download' THEN 1 ELSE 0 END) AS download_total,
       SUM(CASE WHEN type = 'download' AND status = 'success' THEN 1 ELSE 0 END) AS download_success,
-      SUM(CASE WHEN type = 'download' AND status = 'error' THEN 1 ELSE 0 END) AS download_error
+      SUM(CASE WHEN type = 'download' AND status = 'error' THEN 1 ELSE 0 END) AS download_error,
+      SUM(CASE WHEN type = 'generate' AND has_images = 1 THEN 1 ELSE 0 END) AS generate_with_images,
+      SUM(CASE WHEN type = 'generate' AND (has_images = 0 OR has_images IS NULL) THEN 1 ELSE 0 END) AS generate_text_only
     FROM admin_events
   `) as [mysql.RowDataPacket[], unknown];
   const eventAgg = eventRows[0] || {};
@@ -325,6 +343,13 @@ export async function getAdminAggregates() {
     GROUP BY LEFT(created_at, 10)
     ORDER BY day_key
   `, [firstDayKey, todayKey]) as [mysql.RowDataPacket[], unknown];
+  const [hourlyRequestRows] = await database.db.query(`
+    SELECT SUBSTRING(created_at, 12, 2) AS hour, COUNT(*) AS requests
+    FROM admin_events
+    WHERE LEFT(created_at, 10) >= ? AND LEFT(created_at, 10) <= ?
+    GROUP BY SUBSTRING(created_at, 12, 2)
+    ORDER BY hour
+  `, [firstHourDayKey, todayKey]) as [mysql.RowDataPacket[], unknown];
 
   return {
     generateTotal: Number(eventAgg.generate_total) || 0,
@@ -333,6 +358,8 @@ export async function getAdminAggregates() {
     downloadTotal: Number(eventAgg.download_total) || 0,
     downloadSuccess: Number(eventAgg.download_success) || 0,
     downloadError: Number(eventAgg.download_error) || 0,
+    generateWithImages: Number(eventAgg.generate_with_images) || 0,
+    generateTextOnly: Number(eventAgg.generate_text_only) || 0,
     totalVisits: Number(totalRows[0]?.count) || 0,
     uniqueVisitors: Number(uniqueRows[0]?.count) || 0,
     todayVisits: Number(todayRows[0]?.count) || 0,
@@ -346,6 +373,10 @@ export async function getAdminAggregates() {
       date: item.day_key,
       generate: Number(item.generate_total) || 0,
       download: Number(item.download_total) || 0,
+    })),
+    hourlyRequests: (hourlyRequestRows as Array<{ hour: string; requests: number }>).map((item) => ({
+      hour: Number(item.hour),
+      requests: Number(item.requests) || 0,
     })),
   };
 }

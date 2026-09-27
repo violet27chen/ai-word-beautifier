@@ -23,6 +23,7 @@ type AdminEvent = {
 
 type TrafficDay = { date: string; visits: number; uniqueVisitors: number };
 type RequestDay = { date: string; generate: number; download: number };
+type PieDatum = { label: string; value: number; color: string };
 
 type OverviewPayload = {
   project: string;
@@ -41,6 +42,14 @@ type OverviewPayload = {
       last7Days: TrafficDay[];
     };
     requestsByDay: RequestDay[];
+    requestInsights: {
+      total: number;
+      success: number;
+      errors: number;
+      generateWithImages: number;
+      generateTextOnly: number;
+      hourlyRequests: Array<{ hour: number; requests: number }>;
+    };
     recentEvents: AdminEvent[];
   };
 };
@@ -169,6 +178,103 @@ function RequestOutcomeBar({ label, total, success, errors }: { label: string; t
         <span>失败 {errors}</span>
       </div>
     </div>
+  );
+}
+
+function pieSlicePath(startAngle: number, endAngle: number) {
+  const radius = 76;
+  const center = 90;
+  const start = (startAngle * Math.PI) / 180;
+  const end = (endAngle * Math.PI) / 180;
+  const startX = center + radius * Math.cos(start);
+  const startY = center + radius * Math.sin(start);
+  const endX = center + radius * Math.cos(end);
+  const endY = center + radius * Math.sin(end);
+  const largeArc = endAngle - startAngle > 180 ? 1 : 0;
+  return `M ${center} ${center} L ${startX} ${startY} A ${radius} ${radius} 0 ${largeArc} 1 ${endX} ${endY} Z`;
+}
+
+function PieChart({ title, data }: { title: string; data: PieDatum[] }) {
+  const total = data.reduce((sum, item) => sum + item.value, 0);
+  const nonZeroData = data.filter((item) => item.value > 0);
+  const slices = nonZeroData.map((item, index) => {
+    const previousValue = nonZeroData.slice(0, index).reduce((sum, current) => sum + current.value, 0);
+    const startAngle = -90 + (previousValue / total) * 360;
+    return {
+      ...item,
+      startAngle,
+      endAngle: startAngle + (item.value / total) * 360,
+    };
+  });
+
+  return (
+    <div className="flex flex-col items-center gap-3 sm:flex-row sm:items-center">
+      <svg className="h-40 w-40 shrink-0" viewBox="0 0 180 180" role="img" aria-label={`${title}饼图，总计 ${total} 次`}>
+        <title>{title}饼图</title>
+        <desc>{data.map((item) => `${item.label} ${item.value} 次`).join('；')}</desc>
+        {total === 0 ? (
+          <circle cx="90" cy="90" r="76" fill="#e5e7eb" />
+        ) : slices.length === 1 ? (
+          <circle cx="90" cy="90" r="76" fill={slices[0].color}>
+            <title>{`${slices[0].label}: ${slices[0].value}`}</title>
+          </circle>
+        ) : slices.map((slice) => (
+          <path key={slice.label} d={pieSlicePath(slice.startAngle, slice.endAngle)} fill={slice.color}>
+            <title>{`${slice.label}: ${slice.value} (${((slice.value / total) * 100).toFixed(1)}%)`}</title>
+          </path>
+        ))}
+      </svg>
+      <ul className="w-full space-y-2 text-sm">
+        {data.map((item) => (
+          <li key={item.label} className="flex items-center justify-between gap-3">
+            <span className="inline-flex min-w-0 items-center gap-2 text-gray-600">
+              <i className="h-3 w-3 shrink-0 rounded-sm" style={{ backgroundColor: item.color }} />
+              <span>{item.label}</span>
+            </span>
+            <span className="shrink-0 font-medium tabular-nums text-gray-900">
+              {item.value} <span className="font-normal text-gray-500">{total ? `${((item.value / total) * 100).toFixed(1)}%` : '0%'}</span>
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function HourlyActivityChart({ data }: { data: Array<{ hour: number; requests: number }> }) {
+  const top = 16;
+  const bottom = 142;
+  const maxRequests = Math.max(1, ...data.map((item) => item.requests));
+  const barWidth = 8;
+  const x = (hour: number) => 31 + hour * 12.5;
+  const height = (requests: number) => (requests / maxRequests) * (bottom - top);
+
+  return (
+    <svg className="h-auto w-full" viewBox="0 0 360 182" role="img" aria-label="近30天按 UTC 小时汇总的接口请求量">
+      <title>近30天小时活跃度</title>
+      <desc>柱形表示每天对应 UTC 小时的生成和下载请求总数。</desc>
+      {[0, 0.5, 1].map((ratio) => {
+        const gridY = bottom - ratio * (bottom - top);
+        return (
+          <g key={ratio}>
+            <line x1="26" x2="340" y1={gridY} y2={gridY} stroke="#e5e7eb" strokeWidth="1" />
+            <text x="22" y={gridY + 4} textAnchor="end" fill="#6b7280" fontSize="11">{Math.round(maxRequests * ratio)}</text>
+          </g>
+        );
+      })}
+      {data.map((item) => (
+        <g key={item.hour}>
+          <rect x={x(item.hour)} y={bottom - height(item.requests)} width={barWidth} height={height(item.requests)} rx="2" fill="#6366f1">
+            <title>{`${String(item.hour).padStart(2, '0')}:00 UTC · ${item.requests} 次请求`}</title>
+          </rect>
+          {item.hour % 3 === 0 ? (
+            <text x={x(item.hour) + barWidth / 2} y="164" textAnchor="middle" fill="#6b7280" fontSize="11">
+              {String(item.hour).padStart(2, '0')}
+            </text>
+          ) : null}
+        </g>
+      ))}
+    </svg>
   );
 }
 
@@ -348,6 +454,42 @@ export default function AdminPage() {
                 <RequestTrendChart days={trendRows} />
               </section>
             </div>
+
+            <section aria-label="业务结构分析">
+              <h2 className="mb-4 text-lg font-semibold text-gray-900">业务结构分析</h2>
+              <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+                <article className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+                  <h3 className="mb-4 font-semibold text-gray-800">请求类型占比</h3>
+                  <PieChart title="请求类型占比" data={[
+                    { label: '文档生成', value: payload?.overview.generate.total ?? 0, color: '#4f46e5' },
+                    { label: '文档下载', value: payload?.overview.download.total ?? 0, color: '#0ea5e9' },
+                  ]} />
+                </article>
+                <article className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+                  <h3 className="mb-4 font-semibold text-gray-800">请求结果占比</h3>
+                  <PieChart title="成功与失败请求占比" data={[
+                    { label: '成功', value: payload?.overview.requestInsights.success ?? 0, color: '#059669' },
+                    { label: '失败', value: payload?.overview.requestInsights.errors ?? 0, color: '#e11d48' },
+                  ]} />
+                </article>
+                <article className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+                  <h3 className="mb-4 font-semibold text-gray-800">生成输入方式占比</h3>
+                  <PieChart title="带图片与纯文本生成请求占比" data={[
+                    { label: '图片输入', value: payload?.overview.requestInsights.generateWithImages ?? 0, color: '#f59e0b' },
+                    { label: '纯文本', value: payload?.overview.requestInsights.generateTextOnly ?? 0, color: '#6366f1' },
+                  ]} />
+                </article>
+              </div>
+            </section>
+
+            <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm" aria-labelledby="hourly-chart-title">
+              <div className="mb-2 flex items-center gap-2 text-gray-800">
+                <Activity className="h-5 w-5 text-violet-600" />
+                <h2 id="hourly-chart-title" className="font-semibold">小时活跃度（近30天）</h2>
+              </div>
+              <p className="mb-2 text-xs text-gray-500">按 UTC 小时统计生成与下载请求，用于观察一天内的使用时段分布</p>
+              <HourlyActivityChart data={payload?.overview.requestInsights.hourlyRequests ?? []} />
+            </section>
 
             <div className="grid gap-6 lg:grid-cols-2">
               <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm" aria-labelledby="request-outcome-title">
