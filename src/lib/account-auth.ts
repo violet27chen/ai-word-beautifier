@@ -76,7 +76,7 @@ export async function sendAccountActionEmail(user: Pick<AccountUser, 'id' | 'ema
   const expiresInSeconds = isVerification ? 10 * 60 : 60 * 60;
   const tokenHash = await hashSessionToken(isVerification ? `${user.email}:${token}` : token);
   await createAccountToken(user.id, purpose, tokenHash, new Date(Date.now() + expiresInSeconds * 1000).toISOString());
-  const url = new URL('/account', request.url);
+  const url = new URL('/login', request.url);
   if (!isVerification) url.searchParams.set('resetToken', token);
   const subject = isVerification ? 'AI Word 排版美化助手｜邮箱验证码' : 'AI Word 排版美化助手｜重置密码';
   const title = isVerification ? '验证你的邮箱' : '重置账号密码';

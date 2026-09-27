@@ -31,7 +31,7 @@ export async function POST(request: Request) {
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const token = url.searchParams.get('token') || '';
-  const destination = new URL('/account', url.origin);
+  const destination = new URL('/login', url.origin);
   if (!/^[a-f0-9]{64}$/i.test(token)) {
     destination.searchParams.set('verified', 'invalid');
     return NextResponse.redirect(destination, { status: 303, headers: { 'Cache-Control': 'no-store', 'Referrer-Policy': 'no-referrer' } });

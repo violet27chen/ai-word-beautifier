@@ -94,7 +94,7 @@ function AccountControls({ locale, email, onLogout }: { locale: 'zh' | 'en'; ema
       </button>
     </div>
   ) : (
-    <Link href="/account" className="rounded-md border border-indigo-200 px-2.5 py-1.5 text-xs font-medium text-indigo-700 hover:bg-indigo-50 sm:px-3 sm:text-sm">
+    <Link href="/login" className="rounded-md border border-indigo-200 px-2.5 py-1.5 text-xs font-medium text-indigo-700 hover:bg-indigo-50 sm:px-3 sm:text-sm">
       {locale === 'zh' ? '登录 / 注册' : 'Sign in'}
     </Link>
   );
@@ -836,7 +836,7 @@ export default function Home() {
         const errorData = await response.json().catch(() => ({})) as { error?: string; code?: string };
         if (errorData.code === 'AUTH_REQUIRED') {
           setRequiresLogin(true);
-          if (savePendingGenerationDraft()) router.push('/account?returnTo=%2F');
+          if (savePendingGenerationDraft()) router.push('/login?returnTo=%2F');
           else setError(locale === 'zh' ? '无法暂存当前内容，请复制保存后再登录。' : 'Unable to save your draft. Please copy it before signing in.');
           throw new Error('AUTH_REQUIRED');
         }
@@ -911,7 +911,7 @@ export default function Home() {
         setError(locale === 'zh' ? '无法暂存当前内容，请复制保存后再登录。' : 'Unable to save your draft. Please copy it before signing in.');
         return;
       }
-      router.push('/account?returnTo=%2F');
+      router.push('/login?returnTo=%2F');
       return;
     }
 
@@ -950,7 +950,7 @@ export default function Home() {
         setError(locale === 'zh' ? '无法暂存当前内容，请复制保存后再登录。' : 'Unable to save your draft. Please copy it before signing in.');
         return;
       }
-      router.push('/account?returnTo=%2F');
+      router.push('/login?returnTo=%2F');
       return;
     }
 
@@ -1787,7 +1787,7 @@ export default function Home() {
                     <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
                     <div className="text-sm">
                       <p>{error}</p>
-                      {requiresLogin && <Link href="/account?returnTo=%2F" className="mt-2 inline-block font-medium text-indigo-700 underline underline-offset-2">{locale === 'zh' ? '登录或注册' : 'Sign in or create an account'}</Link>}
+                      {requiresLogin && <Link href="/login?returnTo=%2F" className="mt-2 inline-block font-medium text-indigo-700 underline underline-offset-2">{locale === 'zh' ? '登录或注册' : 'Sign in or create an account'}</Link>}
                     </div>
                   </div>
                 )}
